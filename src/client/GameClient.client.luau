@@ -314,9 +314,6 @@ local luckBtn = button({ Size = UDim2.fromOffset(190, 64), Position = UDim2.new(
 	Remotes.Request:InvokeServer("BuyLuck")
 end)
 local luckTimer = label({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, 4), TextColor3 = C.Gold, Parent = luckBtn })
-local cashPassBtn = button({ Size = UDim2.fromOffset(190, 52), Position = UDim2.new(1, -206, 0, 160), Color = C.Green, Text = "💵 2x CASH", Visible = Config.CashPassId ~= 0, Parent = hud }, function()
-	Remotes.Request:InvokeServer("BuyCashPass")
-end)
 
 -- ===================== PANELS =====================
 local openPanel: Frame? = nil
@@ -398,6 +395,303 @@ local function refreshShop()
 		end
 	end
 end
+
+-- ---------- ROBUX SHOP ----------
+-- Layout follows the Figma "Roblox shop" frame: every box below is that frame's pixel rect, turned into scale so the
+-- whole sheet resizes with the screen. Art is the game's own brick models in ViewportFrames.
+local ROBUX = "rbxasset://textures/ui/common/robux.png"
+local SH = {
+	Head1 = Color3.fromRGB(255, 166, 30), Head2 = Color3.fromRGB(255, 205, 60), Bg = Color3.fromRGB(22, 22, 30),
+	Tab = Color3.fromRGB(44, 46, 60), TabOn = Color3.fromRGB(140, 80, 255), Lime = Color3.fromRGB(95, 215, 25),
+	Muted = Color3.fromRGB(170, 175, 195), Gold = Color3.fromRGB(255, 200, 40), Mint = Color3.fromRGB(110, 230, 140),
+}
+local function rect(props, x: number, y: number, w: number, h: number, pw: number, ph: number)
+	props.Size = UDim2.fromScale(w / pw, h / ph)
+	props.Position = UDim2.fromScale(x / pw, y / ph)
+	return props
+end
+local function shopBuy(key: string)
+	local ok, msg = Remotes.Request:InvokeServer("BuyShop", key)
+	if msg then
+		toast(msg, ok and "good" or "bad")
+	end
+end
+local function robuxButton(parent: Instance, robux: number, key: string, x, y, w, h, pw, ph): TextButton
+	local b = button(rect({ Text = "", Color = SH.Lime, Parent = parent }, x, y, w, h, pw, ph), function()
+		shopBuy(key)
+	end)
+	local row = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = b }, {
+		make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+			VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0.03, 0), SortOrder = Enum.SortOrder.LayoutOrder }),
+	})
+	make("ImageLabel", { Image = ROBUX, Size = UDim2.fromScale(0.85, 0.85), SizeConstraint = Enum.SizeConstraint.RelativeYY,
+		BackgroundTransparency = 1, LayoutOrder = 1, Parent = row })
+	label({ Text = tostring(robux), Size = UDim2.fromScale(0.3, 1.25), LayoutOrder = 2, Parent = row, StrokeSize = 3 })
+	return b
+end
+local function card(parent: Instance, c1: Color3, c2: Color3, x, y, w, h, pw, ph): Frame
+	return make("Frame", rect({ BackgroundColor3 = C.White, Parent = parent }, x, y, w, h, pw, ph),
+		{ corner(18), stroke(4, c1:Lerp(C.White, 0.55)), gradient(c1, c2, 20) })
+end
+local function art(parent: Instance, model: string, x, y, w, h, pw, ph)
+	-- cash stacks read better from the 3/4 angle; everything else straight on
+	viewport(model, make("Frame", rect({ BackgroundTransparency = 1, Parent = parent }, x, y, w, h, pw, ph)), false, model ~= "Icon Cash")
+end
+local function caption(parent: Instance, text: string, color: Color3?, x, y, w, h, pw, ph, align: Enum.TextXAlignment?): TextLabel
+	return label(rect({ Text = text, TextColor3 = color, TextXAlignment = align or Enum.TextXAlignment.Left, Parent = parent }, x, y, w, h, pw, ph))
+end
+local function flat(l: TextLabel) -- small grey sub-captions have no outline in the design
+	l.UIStroke.Enabled = false
+end
+local sized = {} -- [section] = height / width; heights follow the width (UIAspectRatioConstraint collapses in a list)
+local function section(parent: Instance, order: number, w: number, h: number): Frame
+	local f = make("Frame", { Size = UDim2.fromScale(1, 0), BackgroundTransparency = 1, LayoutOrder = order, Parent = parent })
+	sized[f] = h / w
+	return f
+end
+
+local robuxFrame = make("Frame", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+	BackgroundColor3 = SH.Bg, Visible = false, Parent = gui }, {
+	corner(22), stroke(5, C.Dark),
+	make("UIAspectRatioConstraint", { AspectRatio = 1200 / 1100 }),
+	make("UISizeConstraint", { MaxSize = Vector2.new(1000, 920) }),
+})
+do -- header (Figma: 1200 x 104)
+	local head = make("Frame", { Size = UDim2.fromScale(1, 104 / 1100), BackgroundColor3 = C.White, Parent = robuxFrame },
+		{ corner(22), gradient(SH.Head1, SH.Head2, 0) })
+	caption(head, "SHOP", nil, 30, 14, 160, 76, 1200, 104)
+	flat(caption(head, "Upgrade your adventure!", Color3.fromRGB(110, 60, 0), 226, 34, 300, 32, 1200, 104))
+	button(rect({ Text = "X", Color = C.Red, Parent = head }, 1092, 17, 76, 68, 1200, 104), function()
+		robuxFrame.Visible = false
+		openPanel = nil
+	end)
+end
+local scroll = make("ScrollingFrame", { Size = UDim2.fromScale(1, 1 - 178 / 1100), Position = UDim2.fromScale(0, 178 / 1100), BackgroundTransparency = 1,
+	ScrollBarThickness = 8, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = robuxFrame }, {
+	make("UIListLayout", { Padding = UDim.new(0, 18), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }),
+	make("UIPadding", { PaddingLeft = UDim.new(32 / 1200, 0), PaddingRight = UDim.new(32 / 1200, 0), PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 20) }),
+})
+
+-- FEATURED: title row, then one card per egg (Figma: 1136 wide; enchanted 346 tall, rainbow 210)
+local sections = {}
+do
+	local s = section(scroll, 1, 1136, 40)
+	sections.Featured = s
+	caption(s, "FEATURED", nil, 0, 0, 160, 36, 1136, 40)
+	flat(caption(s, "Fresh finds. Big upgrades.", SH.Muted, 174, 8, 260, 26, 1136, 40))
+	local resets = caption(s, "", SH.Gold, 760, 6, 340, 26, 1136, 40, Enum.TextXAlignment.Right)
+	task.spawn(function()
+		while true do
+			local left = 86400 - os.time() % 86400 -- next UTC midnight
+			resets.Text = string.format("RESETS IN  %02d:%02d:%02d", left // 3600, left // 60 % 60, left % 60)
+			task.wait(1)
+		end
+	end)
+end
+for i, egg in Config.Shop.Eggs do
+	local big = #egg.Buy >= 3
+	local W, H = 1136, big and 346 or 210
+	local s = section(scroll, 1 + i, W, H)
+	if i == 2 then
+		sections.Eggs = s
+	end
+	local f = big and card(s, Color3.fromRGB(176, 72, 245), Color3.fromRGB(110, 60, 230), 0, 0, W, H, W, H)
+		or card(s, C.White, C.White, 0, 0, W, H, W, H)
+	if not big then -- rainbow sheen like the Figma card
+		f.UIGradient.Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 120, 150)), ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 215, 70)),
+			ColorSequenceKeypoint.new(0.5, Color3.fromRGB(120, 230, 160)), ColorSequenceKeypoint.new(0.75, Color3.fromRGB(110, 180, 255)),
+			ColorSequenceKeypoint.new(1, Color3.fromRGB(230, 130, 255)) })
+	end
+	make("Frame", rect({ BackgroundColor3 = C.White, BackgroundTransparency = 0.82, Parent = f }, big and 18 or 40, big and 48 or 30, big and 278 or 170, big and 278 or 170, W, H),
+		{ make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+	art(f, egg.Icon, big and 20 or 40, big and 30 or 20, big and 276 or 180, big and 300 or 186, W, H)
+	local badge = make("Frame", rect({ BackgroundColor3 = big and SH.Lime or C.Dark, Parent = f }, 22, 16, big and 90 or 130, 34, W, H), { corner(8), stroke(3) })
+	label({ Text = egg.Badge, Size = UDim2.fromScale(0.86, 0.86), Position = UDim2.fromScale(0.07, 0.07), Parent = badge })
+	local tx = big and 324 or 234
+	caption(f, egg.Name, SH.Gold, tx, big and 18 or 14, 420, big and 58 or 48, W, H)
+	caption(f, egg.Blurb, nil, tx + 2, big and 80 or 66, 430, 30, W, H)
+	if big then
+		local total = 0
+		for _, e in egg.Pool do
+			total += e[2]
+		end
+		local odds = {}
+		for _, e in egg.Pool do
+			local rc = Config.Rarities[Config.RarityIndex[Config.AnimalInfo[e[1]].Rarity]].Color
+			table.insert(odds, string.format('<font color="#%s">%s</font>  %g%%', rc:ToHex(), e[1], math.floor(e[2] / total * 1000 + 0.5) / 10))
+		end
+		local oddsBox = make("Frame", rect({ BackgroundColor3 = C.Dark, BackgroundTransparency = 0.08, Visible = false, ZIndex = 5, Parent = f }, 760, 74, 350, 240, W, H), { corner(12), stroke(3) })
+		label({ Text = table.concat(odds, "\n"), Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Left, Parent = oddsBox })
+		button(rect({ Text = "ODDS", Color = Color3.fromRGB(50, 30, 110), Parent = f }, 977, 24, 132, 42, W, H), function()
+			oddsBox.Visible = not oddsBox.Visible
+		end)
+		local rarest = egg.Pool[#egg.Pool]
+		local chips = {
+			{ #egg.Pool .. " UNIQUE PETS", "One magical hatch" },
+			{ string.format("%g%% %s", rarest[2] / total * 100, Config.AnimalInfo[rarest[1]].Rarity:upper()), "Chase the rarest" },
+			{ "LIMITED DROP", "Get it before it's gone" },
+		}
+		for k, chip in chips do
+			local cf = make("Frame", rect({ BackgroundColor3 = Color3.fromRGB(60, 20, 120), BackgroundTransparency = 0.45, Parent = f }, 326 + (k - 1) * 261, 130, 245, 71, W, H),
+				{ corner(10), stroke(2, Color3.fromRGB(200, 150, 255)) })
+			caption(cf, chip[1], SH.Gold, 14, 8, 220, 30, 245, 71)
+			caption(cf, chip[2], nil, 14, 40, 220, 22, 245, 71)
+		end
+	end
+	for k, b in egg.Buy do
+		if big then
+			local bx = 326 + (k - 1) * 261
+			caption(f, "Buy x" .. b.Count, nil, bx, 212, 245, 30, W, H, Enum.TextXAlignment.Center)
+			robuxButton(f, b.Robux, b.Key, bx, 250, 245, 62, W, H)
+		else
+			local bx = 360 + (k - 1) * 452
+			caption(f, "Buy x" .. b.Count, nil, bx - 100, 132, 90, 30, W, H)
+			robuxButton(f, b.Robux, b.Key, bx, 118, 300, 62, W, H)
+		end
+	end
+end
+
+-- CASH PACKS (Figma: title row + four 269 x 256 cards)
+local cashAmounts = {}
+do
+	local W, H = 1136, 306
+	local s = section(scroll, 10, W, H)
+	sections.Cash = s
+	caption(s, "CASH PACKS", nil, 0, 0, 180, 36, W, H)
+	flat(caption(s, "A little boost goes a long way.", SH.Muted, 200, 8, 300, 26, W, H))
+	caption(s, "INSTANT DELIVERY", SH.Mint, 880, 8, 216, 24, W, H, Enum.TextXAlignment.Right)
+	local tagColors = { ["GOOD VALUE"] = C.Blue, ["GREAT VALUE"] = C.Orange, ["BEST VALUE"] = C.Pink }
+	for k, pack in Config.Shop.CashPacks do
+		local cw, ch = 269, 256
+		local f = card(s, Color3.fromRGB(90, 225, 100), Color3.fromRGB(40, 175, 70), (k - 1) * 289, 49, cw, ch, W, H)
+		art(f, "Icon Cash", 30 - k * 6, 14, 209 + k * 12, 150, cw, ch) -- stacks grow with the pack
+		if pack.Tag then
+			local col = tagColors[pack.Tag] or C.Blue
+			local t = make("Frame", rect({ BackgroundColor3 = C.White, Parent = f }, 14, 10, 241, 31, cw, ch), { corner(8), stroke(3), gradient(col:Lerp(C.White, 0.25), col, 90) })
+			label({ Text = pack.Tag, Size = UDim2.fromScale(0.9, 0.8), Position = UDim2.fromScale(0.05, 0.1), Parent = t })
+		end
+		local amt = make("Frame", rect({ BackgroundColor3 = Color3.fromRGB(20, 110, 40), BackgroundTransparency = 0.3, Parent = f }, 14, 156, 241, 31, cw, ch), { corner(14) })
+		cashAmounts[pack] = label({ Text = "", Size = UDim2.fromScale(0.9, 0.95), Position = UDim2.fromScale(0.05, 0.02), Parent = amt })
+		robuxButton(f, pack.Robux, pack.Key, 12, 194, 245, 57, cw, ch)
+	end
+end
+local function refreshCashPacks()
+	local income = math.max(player:GetAttribute("Income") or 0, Config.Shop.MinIncome)
+	for pack, l in cashAmounts do
+		l.Text = "+$" .. Util.Format(income * pack.Seconds)
+	end
+end
+player:GetAttributeChangedSignal("Income"):Connect(refreshCashPacks)
+
+-- GAMEPASSES (Figma: title row + two 556 x 230 cards)
+local passButtons = {}
+do
+	local W, H = 1136, 300
+	local s = section(scroll, 11, W, H)
+	sections.Passes = s
+	caption(s, "GAMEPASSES", nil, 0, 0, 190, 36, W, H)
+	flat(caption(s, "One purchase. Permanent perks.", SH.Muted, 210, 8, 300, 26, W, H))
+	local looks = { { Color3.fromRGB(40, 205, 255), Color3.fromRGB(30, 120, 240) }, { Color3.fromRGB(176, 72, 245), Color3.fromRGB(110, 60, 230) } }
+	for k, pass in Config.Shop.Passes do
+		local cw, ch = 556, 230
+		local look = looks[(k - 1) % #looks + 1]
+		local f = card(s, look[1], look[2], (k - 1) % 2 * 580, 50 + (k - 1) // 2 * 250, cw, ch, W, H)
+		caption(f, pass.Name, nil, 20, 12, 500, 46, cw, ch)
+		make("Frame", rect({ BackgroundColor3 = C.White, BackgroundTransparency = 0.8, Parent = f }, 18, 66, 148, 148, cw, ch), { make("UICorner", { CornerRadius = UDim.new(1, 0) }) })
+		art(f, pass.Icon, 26, 74, 132, 132, cw, ch)
+		caption(f, pass.Text, nil, 199, 70, 330, 74, cw, ch).TextWrapped = true
+		passButtons[pass.Key] = robuxButton(f, pass.Robux, pass.Key, 195, 155, 341, 57, cw, ch)
+	end
+end
+local function refreshPasses()
+	for key, b in passButtons do
+		local owned = Data and Data.Passes and Data.Passes[key]
+		setButtonColor(b, owned and C.Blue or SH.Lime)
+		for _, d in b:GetDescendants() do
+			if d:IsA("TextLabel") then
+				d.Text = owned and "OWNED" or tostring(Config.ShopItem[key].Robux)
+			elseif d:IsA("ImageLabel") then
+				d.Visible = not owned
+			end
+		end
+	end
+end
+
+do -- footer
+	local s = section(scroll, 12, 1136, 40)
+	flat(caption(s, "All prices in Robux  •  Purchases support future updates", SH.Muted, 0, 8, 520, 26, 1136, 40))
+	caption(s, "THANKS FOR PLAYING!", SH.Gold, 800, 8, 300, 26, 1136, 40, Enum.TextXAlignment.Right)
+end
+
+do -- tabs (Figma: 1200 x 74 under the header) scroll to their section
+	local tabs = make("Frame", { Size = UDim2.fromScale(1, 74 / 1100), Position = UDim2.fromScale(0, 104 / 1100), BackgroundTransparency = 1, Parent = robuxFrame })
+	local list = { { "Featured", sections.Featured, 28, 190 }, { "Eggs", sections.Eggs, 230, 140 }, { "Cash & boosts", sections.Cash, 382, 238 }, { "Gamepasses", sections.Passes, 632, 226 } }
+	local btns = {}
+	for _, t in list do
+		local b
+		b = button(rect({ Text = t[1], Color = SH.Tab, Parent = tabs }, t[3], 14, t[4], 46, 1200, 74), function()
+			for _, o in btns do
+				setButtonColor(o, o == b and SH.TabOn or SH.Tab)
+			end
+			local y = t[2].AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y - 10
+			TweenService:Create(scroll, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { CanvasPosition = Vector2.new(0, math.max(0, y)) }):Play()
+		end)
+		table.insert(btns, b)
+	end
+	setButtonColor(btns[1], SH.TabOn)
+end
+
+local function fitSections()
+	for f, ratio in sized do
+		f.Size = UDim2.new(1, 0, 0, math.floor(f.AbsoluteSize.X * ratio))
+	end
+end
+scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitSections)
+
+local function refreshRobuxShop()
+	fitSections()
+	refreshCashPacks()
+	refreshPasses()
+end
+
+-- egg hatch reveal: a row of the hatched animals, rarest called out
+Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
+	if robuxFrame.Visible then
+		robuxFrame.Visible = false
+		openPanel = nil
+	end
+	local best = 0
+	local n = math.min(#results, 10)
+	local holder = make("Frame", { Size = UDim2.fromOffset(math.min(n, 5) * 150 + 30, (n > 5 and 2 or 1) * 170 + 80), Position = UDim2.fromScale(0.5, 0.45),
+		AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = SH.Bg, Parent = overlay }, { corner(20), stroke(5, SH.TabOn) })
+	label({ Text = eggName .. (n > 1 and (" x" .. n) or ""), Size = UDim2.new(1, -20, 0, 50), Position = UDim2.fromOffset(10, 10), TextColor3 = SH.Gold, Parent = holder })
+	for k = 1, n do
+		local a = results[k]
+		local ri = Config.RarityIndex[Config.AnimalInfo[a.Name].Rarity]
+		best = math.max(best, ri)
+		local rc = Config.Rarities[ri].Color
+		local cell = make("Frame", { Size = UDim2.fromOffset(140, 160), Position = UDim2.fromOffset(15 + (k - 1) % 5 * 150, 66 + (k - 1) // 5 * 170),
+			BackgroundColor3 = C.White, Parent = holder }, { corner(14), stroke(3), gradient(rc:Lerp(C.White, 0.3), rc:Lerp(C.Dark, 0.3), 90) })
+		local vp = make("Frame", { Size = UDim2.fromScale(0.9, 0.62), Position = UDim2.fromScale(0.05, 0.02), BackgroundTransparency = 1, Parent = cell })
+		viewport(a.Name, vp)
+		label({ Text = a.Name, Size = UDim2.fromScale(0.94, 0.17), Position = UDim2.fromScale(0.03, 0.64), Parent = cell })
+		local tags = {}
+		if a.Size ~= "Normal" then
+			table.insert(tags, a.Size)
+		end
+		if a.Mutation ~= "None" then
+			table.insert(tags, a.Mutation)
+		end
+		label({ Text = #tags > 0 and table.concat(tags, " "):upper() or Config.Rarities[ri].Name, Size = UDim2.fromScale(0.94, 0.14), Position = UDim2.fromScale(0.03, 0.82), TextColor3 = SH.Gold, Parent = cell })
+		bounce(cell)
+	end
+	bounce(holder)
+	play(best >= 5 and "Legendary" or (best >= 3 and "Rare" or "Catch"))
+	task.delay(4.5, function()
+		holder:Destroy()
+	end)
+end)
 
 -- ---------- ANIMALS ----------
 local animalsFrame, animalsBody = panel("🐾 My Animals", C.Orange)
@@ -541,8 +835,8 @@ end
 sideButton("Index", "Icon Book", UDim2.new(0, 14, 0.5, -150), C.Blue, function()
 	toggle(indexFrame, refreshIndex)
 end)
-sideButton("Shop", "Icon Basket", UDim2.new(0, 14, 0.5, -40), C.Pink, function()
-	toggle(shopFrame, refreshShop)
+sideButton("Shop", "Icon Egg Enchanted", UDim2.new(0, 14, 0.5, -40), C.Pink, function()
+	toggle(robuxFrame, refreshRobuxShop) -- Robux shop; the Noob vendor's stall opens the toy shop
 end)
 sideButton("Animals", "Icon Paw", UDim2.new(1, -106, 0.5, -60), C.Orange, function()
 	toggle(animalsFrame, refreshAnimals)
@@ -551,6 +845,7 @@ end)
 Remotes.Data.OnClientEvent:Connect(function(d)
 	Data = d
 	refreshShop()
+	refreshPasses()
 	refreshAnimals()
 	refreshIndex()
 	updateStats()

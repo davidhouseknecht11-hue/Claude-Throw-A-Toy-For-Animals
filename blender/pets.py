@@ -488,3 +488,30 @@ a = Brick("Icon Clover", "Icons")
 for x, z in ((-0.4, 0.4), (0.4, 0.4), (-0.4, -0.35), (0.4, -0.35)):
     a.b((0.75, 0.3, 0.75), (x, 0, z), "3CC84A")
 a.b((0.15, 0.3, 0.8), (0.1, 0, -0.9), "2A9A38", rot=(0, 20, 0))
+
+
+# Robux shop art (eggs + cash), stacked brick layers so they keep the studded look
+def egg(a, cols):
+    prof = ((0.55, 0.0), (0.85, 0.3), (0.97, 0.6), (1.0, 0.9), (0.95, 1.2), (0.84, 1.5), (0.66, 1.8), (0.4, 2.05))
+    for i, (r, z) in enumerate(prof):
+        c = cols[i % len(cols)]
+        a.b((2 * r, 1.4 * r, 0.32), (0, 0, z), c).b((1.4 * r, 2 * r, 0.32), (0, 0, z), c)
+
+
+a = Brick("Icon Egg Enchanted", "Icons")
+egg(a, ("8A4BE0", "9B5CF0"))
+a.b((2.1, 1.5, 0.3), (0, 0, 0.75), "FFC21C").b((1.5, 2.1, 0.3), (0, 0, 0.75), "FFC21C")
+a.b((0.42, 0.16, 0.42), (0, 1.08, 0.75), "5CE6FF", kind="neon", rot=(0, 45, 0))
+a.b((1.5, 1.1, 0.28), (0, 0, -0.28), "FFC21C").b((1.2, 0.9, 0.2), (0, 0, -0.5), "E8A010")
+for x, tilt, h in ((-0.32, -22, 0.55), (0, 0, 0.75), (0.32, 22, 0.55)):
+    a.b((0.24, 0.24, h), (x, 0, 2.2 + h / 2), "6FF0FF", kind="glass", rot=(0, tilt, 0))
+a = Brick("Icon Egg Rainbow", "Icons")
+egg(a, ("FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "7A5CFF", "C85CFF", "FF6AD5"))
+a = Brick("Icon Cash", "Icons")
+for row, n in enumerate((3, 2, 1)):
+    for i in range(n):
+        x = (i - (n - 1) / 2) * 1.25
+        z = row * 0.47
+        a.b((1.2, 0.6, 0.45), (x, 0, z), "4CC94C").b((0.24, 0.62, 0.47), (x, 0, z), "FFD23C")
+for x, z in ((1.85, -0.1), (1.6, 0.1)):
+    a.b((0.45, 0.45, 0.12), (x, 0.2, z), "FFC21C")

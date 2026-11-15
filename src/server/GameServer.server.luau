@@ -30,6 +30,7 @@ local ThrowFX = remote("RemoteEvent", "ThrowFX") -- lets every client play a pla
 local Notify = remote("RemoteEvent", "Notify")
 local TrainEvent = remote("RemoteEvent", "Train")
 local Request = remote("RemoteFunction", "Request")
+local HatchEvent = remote("RemoteEvent", "Hatch") -- egg results for the client reveal
 Remotes.Parent = RS
 
 local store
@@ -100,7 +101,7 @@ local function totalIncome(prof): number
 			sum += animalIncome(a)
 		end
 	end
-	return sum * indexBonus(prof.Data) * (prof.CashPass and 2 or 1)
+	return sum * indexBonus(prof.Data) * (prof.Passes.CashPass and 2 or 1)
 end
 
 local function placedCount(d): number
@@ -260,7 +261,7 @@ local function snapshot(prof)
 	return {
 		Cash = d.Cash, Power = d.Power, Toys = d.Toys, Toy = d.Toy, Bar = d.Bar, Slots = d.Slots, Animals = animals,
 		Index = d.Index, LuckUntil = d.LuckUntil, Income = totalIncome(prof), IndexBonus = indexBonus(d),
-		CashPass = prof.CashPass, ServerTime = os.time(),
+		Passes = prof.Passes, ServerTime = os.time(),
 	}
 end
 
@@ -437,7 +438,7 @@ local function startTraining(player: Player)
 			if not prof.Training then
 				break
 			end
-			prof.Data.Power += Config.Bars[prof.Data.Bar].PerRep
+			prof.Data.Power += Config.Bars[prof.Data.Bar].PerRep * (prof.Passes.TrainPass and 2 or 1)
 			player:SetAttribute("Power", prof.Data.Power)
 			local ls = player:FindFirstChild("leaderstats")
 			if ls then
@@ -625,11 +626,22 @@ function Actions.BuyLuck(player, prof)
 	return true
 end
 
-function Actions.BuyCashPass(player, prof)
-	if Config.CashPassId == 0 then
-		return false, "2x Cash isn't for sale yet"
+function Actions.BuyShop(player, prof, key: string)
+	local item = Config.ShopItem[key]
+	if not item then
+		return false
 	end
-	MPS:PromptGamePassPurchase(player, Config.CashPassId)
+	if prof.Passes[key] then
+		return false, "You already own this!"
+	end
+	if item.Id == 0 then
+		return false, "Not for sale yet!"
+	end
+	if item.Text then -- game passes have a description, products don't
+		MPS:PromptGamePassPurchase(player, item.Id)
+	else
+		MPS:PromptProductPurchase(player, item.Id)
+	end
 	return true
 end
 
@@ -838,15 +850,17 @@ Players.PlayerAdded:Connect(function(player)
 	if not player.Parent then
 		return
 	end
-	local prof = { Data = d, Plot = assignPlot(player), Busy = false, Training = false, CanSave = loaded, CashPass = false }
+	local prof = { Data = d, Plot = assignPlot(player), Busy = false, Training = false, CanSave = loaded, Passes = {} }
 	Profiles[player] = prof
 	if not loaded then
 		-- never overwrite a save we failed to read
 		notify(player, "Couldn't load your save. Progress this session won't be saved. Rejoin to retry.", "bad")
 	end
-	if Config.CashPassId ~= 0 then
-		local okPass, owns = pcall(MPS.UserOwnsGamePassAsync, MPS, player.UserId, Config.CashPassId)
-		prof.CashPass = okPass and owns or false
+	for _, pass in Config.Shop.Passes do
+		if pass.Id ~= 0 then
+			local okPass, owns = pcall(MPS.UserOwnsGamePassAsync, MPS, player.UserId, pass.Id)
+			prof.Passes[pass.Key] = okPass and owns or nil
+		end
 	end
 	if prof.Plot then
 		local owner = prof.Plot:FindFirstChild("OwnerSign")
@@ -913,6 +927,48 @@ game:BindToClose(function()
 	task.wait(3)
 end)
 
+-- ===================== ROBUX SHOP =====================
+local ProductById = {}
+for key, item in Config.ShopItem do
+	if item.Id ~= 0 and not item.Text then
+		ProductById[item.Id] = item
+	end
+end
+
+local allAnimals = {}
+for _, z in Config.Zones do
+	for _, a in z.Animals do
+		table.insert(allAnimals, { a[1], Config.Rarities[Config.RarityIndex[a[2]]].Weight })
+	end
+end
+
+local function hatch(player: Player, prof, egg, count: number)
+	local d, results = prof.Data, {}
+	for _ = 1, count do
+		local pick = Util.Pick(egg.Pool or allAnimals, function(e)
+			return e[2]
+		end, rng)
+		local size = egg.Size or Util.Pick(Config.Sizes, function(sz) return sz.Chance end, rng).Name
+		local mut = egg.Mutation or Util.Pick(Config.Mutations, function(m) return m.Chance end, rng).Name
+		local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size, Mutation = mut, Placed = false }
+		d.Index[pick[1]] = true
+		addAnimal(player, animal)
+		table.insert(results, animal)
+	end
+	HatchEvent:FireClient(player, egg.Name, results)
+end
+
+local function grantProduct(player: Player, prof, item)
+	if item.Egg then
+		hatch(player, prof, item.Egg, item.Count)
+	else
+		local gain = math.max(totalIncome(prof), Config.Shop.MinIncome) * item.Seconds
+		prof.Data.Cash += gain
+		notify(player, "+$" .. Util.Format(gain) .. " cash!", "good")
+	end
+	refresh(player)
+end
+
 MPS.ProcessReceipt = function(receipt)
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local prof = player and Profiles[player]
@@ -926,15 +982,26 @@ MPS.ProcessReceipt = function(receipt)
 		save(player)
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
+	local item = ProductById[receipt.ProductId]
+	if item then
+		grantProduct(player, prof, item)
+		save(player)
+		return Enum.ProductPurchaseDecision.PurchaseGranted
+	end
 	return Enum.ProductPurchaseDecision.NotProcessedYet
 end
 
 MPS.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
 	local prof = Profiles[player]
-	if prof and bought and passId == Config.CashPassId then
-		prof.CashPass = true
-		notify(player, "💵 2x Cash unlocked forever!", "good")
-		pushData(player)
+	if not (prof and bought) then
+		return
+	end
+	for _, pass in Config.Shop.Passes do
+		if pass.Id == passId then
+			prof.Passes[pass.Key] = true
+			notify(player, pass.Name .. " unlocked forever!", "good")
+			pushData(player)
+		end
 	end
 end)
 

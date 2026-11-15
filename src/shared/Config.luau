@@ -102,7 +102,44 @@ end
 Config.LuckProductId = 0 -- developer product: 100x luck for 15 minutes
 Config.LuckBoost = 100
 Config.LuckBoostSeconds = 15 * 60
-Config.CashPassId = 0 -- game pass: 2x cash forever
+
+-- Robux shop (layout from the Figma "Roblox shop" frame). Id = developer product / game pass id from the Creator
+-- Dashboard; 0 = button says "not for sale yet". Robux is display only: keep it equal to the dashboard price.
+Config.Shop = {
+	Eggs = {
+		{ Name = "ENCHANTED EGG", Badge = "NEW!", Blurb = "A little magic. A legendary new friend.", Icon = "Icon Egg Enchanted",
+			Pool = { { "Tiger", 30 }, { "Lion", 30 }, { "Polar Bear", 24 }, { "Arctic Wolf", 10 }, { "Phoenix", 5 }, { "Dragon", 1 } },
+			Buy = { { Key = "Enchanted1", Count = 1, Robux = 72, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 180, Id = 0 },
+				{ Key = "Enchanted10", Count = 10, Robux = 585, Id = 0 } } },
+		{ Name = "RAINBOW EGG", Badge = "LIMITED", Blurb = "Hatch a random Rainbow Huge animal!", Icon = "Icon Egg Rainbow",
+			Mutation = "Rainbow", Size = "Huge", -- pool: every animal, weighted by rarity
+			Buy = { { Key = "Rainbow1", Count = 1, Robux = 90, Id = 0 }, { Key = "Rainbow3", Count = 3, Robux = 225, Id = 0 } } },
+	},
+	-- a pack pays this many seconds of your current income (at least MinIncome/s), so it stays worth it at every stage
+	CashPacks = {
+		{ Key = "Cash1", Seconds = 600, Robux = 22, Id = 0 },
+		{ Key = "Cash2", Seconds = 3600, Robux = 54, Id = 0, Tag = "GOOD VALUE" },
+		{ Key = "Cash3", Seconds = 6 * 3600, Robux = 72, Id = 0, Tag = "GREAT VALUE" },
+		{ Key = "Cash4", Seconds = 24 * 3600, Robux = 180, Id = 0, Tag = "BEST VALUE" },
+	},
+	MinIncome = 20,
+	Passes = { -- game passes
+		{ Key = "CashPass", Name = "x2 CASH", Text = "Double cash from every animal!", Icon = "Icon Cash", Robux = 90, Id = 0 },
+		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 135, Id = 0 },
+	},
+}
+Config.ShopItem = {} :: { [string]: any } -- Key -> entry (egg buys also get .Egg)
+for _, egg in Config.Shop.Eggs do
+	for _, b in egg.Buy do
+		b.Egg = egg
+		Config.ShopItem[b.Key] = b
+	end
+end
+for _, list in { Config.Shop.CashPacks, Config.Shop.Passes } do
+	for _, it in list do
+		Config.ShopItem[it.Key] = it
+	end
+end
 
 function Config.SlotPrice(slots: number): number
 	return math.floor(150 * 3 ^ ((slots - Config.StartSlots) / 2))

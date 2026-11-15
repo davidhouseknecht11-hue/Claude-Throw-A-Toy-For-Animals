@@ -9,8 +9,11 @@ Open `ThrowAToy.rbxlx` in Roblox Studio and press Play. Everything is inside: ma
 Studs (Roblox stud texture 10509831729) and all 17 sounds (uploaded to your account) are already wired in via `assets.json`.
 New sounds can take a few minutes to pass Roblox moderation before they play.
 1. **Saving**: Game Settings > Security > Enable Studio Access to API Services (to test saving in Studio).
-2. **Robux** (optional): create a developer product (100x luck, 15 min) and a game pass (2x cash), then set
-   `LuckProductId` / `CashPassId` in ReplicatedStorage > Shared > Config. The buttons appear once set.
+2. **Robux shop** (the Shop button; the Noob's stall is the toy shop): create these on the Creator Dashboard and paste
+   each id into `Config.Shop` (`Id = 0` buttons say "Not for sale yet"). Keep the Robux numbers equal to the dashboard prices.
+   - Developer products: Enchanted Egg x1/x3/x10, Rainbow Egg x1/x3, Cash packs 1-4 (pay 10 min / 1 h / 6 h / 24 h of income).
+   - Game passes: x2 Cash, x2 Training Power.
+   - Optional: `LuckProductId` (100x luck, 15 min) shows a HUD button once set.
 
 ## Gameplay
 - Stand on the orange pad, tap when the meter is high: green top = PERFECT (+1% power).
