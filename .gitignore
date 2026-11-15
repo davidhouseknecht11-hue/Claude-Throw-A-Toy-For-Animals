@@ -6,3 +6,4 @@ __pycache__/
 # local Studio test copies; ThrowAToy.rbxlx is the real place file
 ThrowAToy_v*.rbxlx
 *.lock
+TATUpdate.rbxmx
