@@ -607,18 +607,7 @@ for x, y in ((0, 0.4), (0, -0.4), (0.4, 0), (-0.4, 0)):
 a.b((0.22, 0.08, 0.16), (0, 0.53, 0.15), "FF3B6B", kind="neon").b((0.08, 0.22, 0.16), (0.53, 0, 0.15), "3AA8FF", kind="neon")
 a.b((0.08, 0.22, 0.16), (-0.53, 0, 0.15), "4CD964", kind="neon")
 
-a = Brick("Mut Rainbow", "Mutations")
 import math as _mm
-BANDS = ["FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "9B5CFF"]
-for i, col in enumerate(BANDS):
-    r = 2.0 - i * 0.16
-    n = 7
-    for k in range(n):
-        t = _mm.pi * (k + 0.5) / n
-        seg = 2 * r * _mm.sin(_mm.pi / n / 2) * 1.08
-        a.b((seg, 0.24, 0.17), (_mm.cos(t) * r, 0, _mm.sin(t) * r), col, kind="neon", rot=(0, -_mm.degrees(t) + 90, 0))
-for x in (-1.6, 1.6):
-    a.b((0.75, 0.5, 0.35), (x, 0, 0.17), "FFFFFF").b((0.45, 0.4, 0.3), (x + 0.15, 0, 0.42), "FFFFFF").b((0.35, 0.35, 0.25), (x - 0.25, 0, 0.36), "F2F6FF")
 
 a = Brick("Mut Ring", "Mutations")
 for k in range(12):

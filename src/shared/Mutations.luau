@@ -8,7 +8,7 @@ local Mutations = {}
 local GOLD_DARK, GOLD_LIGHT = Color3.fromRGB(150, 92, 8), Color3.fromRGB(255, 228, 100)
 local SPACE_DARK, SPACE_LIGHT = Color3.fromRGB(14, 9, 44), Color3.fromRGB(120, 75, 255)
 local STARLIGHT = Color3.fromRGB(160, 130, 255)
-local PROP = { Golden = "Mut Crown", Rainbow = "Mut Rainbow", Cosmic = "Mut Ring" }
+local PROP = { Golden = "Mut Crown", Cosmic = "Mut Ring" } -- Rainbow has no prop: the color cycle is the effect
 local RAINBOW = { Color3.fromRGB(255, 40, 60), Color3.fromRGB(50, 110, 255), Color3.fromRGB(40, 220, 90) } -- red, blue, green
 local RAINBOW_STEP = 1.1 -- seconds per color
 
@@ -64,7 +64,7 @@ local function recolor(parts: { BasePart }, mutation: string, pivot: CFrame, lo:
 end
 
 local function attachProp(model: Model, mutation: string, parts: { BasePart }, pivot: CFrame, lo: Vector3, hi: Vector3)
-	local tpl = Models:FindFirstChild(PROP[mutation])
+	local tpl = PROP[mutation] and Models:FindFirstChild(PROP[mutation])
 	if not tpl then
 		return
 	end
@@ -85,9 +85,6 @@ local function attachProp(model: Model, mutation: string, parts: { BasePart }, p
 		local hmid = (hlo + hhi) / 2
 		bone, scale = "head", (hhi.X - hlo.X) * 0.7 / psize.X
 		place = pivot * CFrame.new(hmid.X, hhi.Y - 0.08 * scale, hmid.Z)
-	elseif mutation == "Rainbow" then -- arc over the back, nose to tail
-		bone, scale = "body", math.max(span.Z * 1.2 / psize.X, span.Y * 1.3 / psize.Y) -- clears the whole pet
-		place = pivot * CFrame.new(mid.X, lo.Y, mid.Z) * CFrame.Angles(0, math.pi / 2, 0)
 	else -- cosmic ring around the middle, tilted like a planet's
 		bone, scale = "body", math.max(span.X, span.Z) * 1.35 / psize.X
 		place = pivot * CFrame.new(mid.X, lo.Y + span.Y * 0.45 - psize.Y * scale / 2, mid.Z) * CFrame.Angles(math.rad(16), 0, math.rad(8))
@@ -104,7 +101,7 @@ end
 
 -- Apply once to a pet model that is already scaled and placed.
 function Mutations.Apply(model: Model, mutation: string?)
-	if not mutation or not PROP[mutation] or model:GetAttribute("Mutated") then
+	if not mutation or mutation == "None" or model:GetAttribute("Mutated") then
 		return
 	end
 	model:SetAttribute("Mutated", mutation)
