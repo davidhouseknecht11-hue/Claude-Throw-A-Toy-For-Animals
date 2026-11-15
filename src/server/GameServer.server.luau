@@ -737,7 +737,7 @@ function Actions.BuyShop(player, prof, key: string)
 	if item.Id == 0 then
 		return false, "Not for sale yet!"
 	end
-	if item.Text then -- game passes have a description, products don't
+	if item.Text or item.Pass then -- perk passes have a description; Pass marks eggs / cash sold as one-time passes
 		MPS:PromptGamePassPurchase(player, item.Id)
 	else
 		MPS:PromptProductPurchase(player, item.Id)
@@ -1030,7 +1030,7 @@ end)
 -- ===================== ROBUX SHOP =====================
 local ProductById = {}
 for key, item in Config.ShopItem do
-	if item.Id ~= 0 and not item.Text then
+	if item.Id ~= 0 and not item.Text and not item.Pass then
 		ProductById[item.Id] = item
 	end
 end
@@ -1110,6 +1110,12 @@ MPS.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
 			prof.Passes[pass.Key] = true
 			notify(player, pass.Name .. " unlocked forever!", "good")
 			pushData(player)
+		end
+	end
+	for _, item in Config.ShopItem do -- eggs / cash sold as game passes: grant the reward now
+		if item.Pass and item.Id == passId then
+			grantProduct(player, prof, item)
+			save(player)
 		end
 	end
 end)

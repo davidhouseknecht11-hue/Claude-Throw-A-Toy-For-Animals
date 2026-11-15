@@ -22,6 +22,7 @@ local Map = workspace:WaitForChild("Map")
 local ThrowLine = Map:WaitForChild("ThrowLine") :: BasePart -- walk over it to throw
 
 local Data = nil -- latest server snapshot
+local secretShow = nil -- plays hatched Secrets' cinematics (defined with the cinematic player)
 local busy = false -- mid-throw
 local camera = workspace.CurrentCamera
 
@@ -663,11 +664,7 @@ local function refreshRobuxShop()
 end
 
 -- egg hatch reveal: a row of the hatched animals, rarest called out
-Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
-	if robuxFrame.Visible then
-		robuxFrame.Visible = false
-		openPanel = nil
-	end
+local function hatchCard(eggName: string, results)
 	local best = 0
 	local n = math.min(#results, 10)
 	local holder = make("Frame", { Size = UDim2.fromOffset(math.min(n, 5) * 150 + 30, (n > 5 and 2 or 1) * 170 + 80), Position = UDim2.fromScale(0.5, 0.45),
@@ -701,6 +698,18 @@ Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
 	task.delay(4.5, function()
 		holder:Destroy()
 	end)
+end
+Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
+	if robuxFrame.Visible then
+		robuxFrame.Visible = false
+		openPanel = nil
+	end
+	for _, a in results do
+		if secretShow and Config.AnimalInfo[a.Name].Rarity == "Secret" then
+			secretShow(a)
+		end
+	end
+	hatchCard(eggName, results)
 end)
 
 -- ---------- ANIMALS (right-docked "My Animals" list, like the original) ----------
@@ -1750,6 +1759,45 @@ local function cinematicPlayer(name: string, rig: Rig, restCF: CFrame, sizeScale
 		end
 	end
 	return step, cine.Length
+end
+
+-- A hatched Secret: it appears a few studs in front of you and plays its cinematic with the name reveal.
+secretShow = function(a)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp or busy then
+		return
+	end
+	busy = true
+	hud.Visible = false
+	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
+	local look = Vector3.new(hrp.CFrame.LookVector.X, 0, hrp.CFrame.LookVector.Z).Unit
+	local floor = hrp.Position - Vector3.new(0, (char:FindFirstChildOfClass("Humanoid") :: Humanoid).HipHeight + hrp.Size.Y / 2, 0)
+	local spot = floor + look * 9
+	local restCF = CFrame.lookAt(spot, spot - look) * CFrame.Angles(0, math.pi, 0) -- models face -Z: turn to face you
+	local animal = cloneModel(a.Name, size.Scale)
+	if animal then
+		Mutations.Apply(animal, a.Mutation)
+		local shimmer = Mutations.RainbowParts(animal)
+		local rig = buildRig(animal)
+		local step, length = cinematicPlayer(a.Name, rig, restCF, size.Scale, shimmer)
+		if step then
+			local rc = Config.Rarities[Config.RarityIndex.Secret].Color
+			screenFlash(Color3.new(0, 0, 0), 0.85)
+			task.spawn(letterReveal, (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name, rc)
+			local t0 = os.clock()
+			while os.clock() - t0 < length do
+				step(os.clock() - t0)
+				RunService.RenderStepped:Wait()
+			end
+			step(nil)
+			revealLabel.Visible = false
+		end
+		animal:Destroy()
+	end
+	camera.CameraType = Enum.CameraType.Custom
+	hud.Visible = true
+	busy = false
 end
 
 local function runThrow(r)

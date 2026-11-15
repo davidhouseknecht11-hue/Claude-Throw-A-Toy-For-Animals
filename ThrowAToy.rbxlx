@@ -90564,31 +90564,41 @@ Config.LuckBoostSeconds = 15 * 60
 
 -- Robux shop (layout from the Figma "Roblox shop" frame). Id = developer product / game pass id from the Creator
 -- Dashboard; 0 = button says "not for sale yet". Robux is display only: keep it equal to the dashboard price.
+-- Pass = true: the item is a Game Pass that grants its reward once when bought (a pass can only be bought once per
+-- player). Make it a Developer Product instead to allow repeat buys: paste the product id and remove Pass.
 Config.Shop = {
 	Eggs = {
 		{ Name = "ENCHANTED EGG", Badge = "NEW!", Blurb = "A little magic. A legendary new friend.", Icon = "Icon Egg Enchanted",
 			Pool = {}, -- filled from Config.Exclusives below
-			Buy = { { Key = "Enchanted1", Count = 1, Robux = 72, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 180, Id = 0 },
-				{ Key = "Enchanted10", Count = 10, Robux = 585, Id = 0 } } },
-		{ Name = "RAINBOW EGG", Badge = "LIMITED", Blurb = "Hatch a random Rainbow Huge animal!", Icon = "Icon Egg Rainbow",
-			Mutation = "Rainbow", Size = "Huge", -- pool: every animal, weighted by rarity
-			Buy = { { Key = "Rainbow1", Count = 1, Robux = 90, Id = 0 }, { Key = "Rainbow3", Count = 3, Robux = 225, Id = 0 } } },
+			Buy = { { Key = "Enchanted1", Count = 1, Robux = 35, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 90, Id = 2087890754, Pass = true },
+				{ Key = "Enchanted10", Count = 10, Robux = 299, Id = 2088634776, Pass = true } } },
+		{ Name = "RAINBOW EGG", Badge = "SECRET", Blurb = "GUARANTEED Rainbow Huge SECRET!", Icon = "Icon Egg Rainbow",
+			Mutation = "Rainbow", Size = "Huge", Pool = {}, -- pool: every Secret pet, equal chance (filled below)
+			Buy = { { Key = "Rainbow1", Count = 1, Robux = 45, Id = 2088304776, Pass = true },
+				{ Key = "Rainbow3", Count = 3, Robux = 129, Id = 2088232697, Pass = true } } },
 	},
 	-- packs grow as you get richer: the bigger of Seconds of income or Share of the cash you hold (see CashPackValue)
 	CashPacks = {
-		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 22, Id = 0 },
-		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 54, Id = 0, Tag = "GOOD VALUE" },
-		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 72, Id = 0, Tag = "GREAT VALUE" },
-		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 180, Id = 0, Tag = "BEST VALUE" },
+		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 11, Id = 2088400723, Pass = true },
+		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 29, Id = 2089612769, Pass = true, Tag = "GOOD VALUE" },
+		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 39, Id = 2088856705, Pass = true, Tag = "GREAT VALUE" },
+		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 59, Id = 2088118759, Pass = true, Tag = "BEST VALUE" },
 	},
 	MinIncome = 20,
 	Passes = { -- game passes
-		{ Key = "CashPass", Name = "x2 CASH", Text = "Double cash from every animal!", Icon = "Icon Cash", Robux = 90, Id = 0 },
-		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 135, Id = 0 },
+		{ Key = "CashPass", Name = "x2 CASH", Text = "Double cash from every animal!", Icon = "Icon Cash", Robux = 45, Id = 2087968788 },
+		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 75, Id = 2088430721 },
 	},
 }
 for _, e in Config.Exclusives do
 	table.insert(Config.Shop.Eggs[1].Pool, { e.Name, e.Chance })
+end
+for _, z in Config.Zones do
+	for _, a in z.Animals do
+		if a[2] == "Secret" then
+			table.insert(Config.Shop.Eggs[2].Pool, { a[1], 1 })
+		end
+	end
 end
 
 function Config.CashPackValue(pack, income: number, cash: number): number
@@ -129637,7 +129647,7 @@ function Actions.BuyShop(player, prof, key: string)
 	if item.Id == 0 then
 		return false, "Not for sale yet!"
 	end
-	if item.Text then -- game passes have a description, products don't
+	if item.Text or item.Pass then -- perk passes have a description; Pass marks eggs / cash sold as one-time passes
 		MPS:PromptGamePassPurchase(player, item.Id)
 	else
 		MPS:PromptProductPurchase(player, item.Id)
@@ -129930,7 +129940,7 @@ end)
 -- ===================== ROBUX SHOP =====================
 local ProductById = {}
 for key, item in Config.ShopItem do
-	if item.Id ~= 0 and not item.Text then
+	if item.Id ~= 0 and not item.Text and not item.Pass then
 		ProductById[item.Id] = item
 	end
 end
@@ -130012,6 +130022,12 @@ MPS.PromptGamePassPurchaseFinished:Connect(function(player, passId, bought)
 			pushData(player)
 		end
 	end
+	for _, item in Config.ShopItem do -- eggs / cash sold as game passes: grant the reward now
+		if item.Pass and item.Id == passId then
+			grantProduct(player, prof, item)
+			save(player)
+		end
+	end
 end)
 
 -- income + autosave loops
@@ -130071,6 +130087,7 @@ local Map = workspace:WaitForChild("Map")
 local ThrowLine = Map:WaitForChild("ThrowLine") :: BasePart -- walk over it to throw
 
 local Data = nil -- latest server snapshot
+local secretShow = nil -- plays hatched Secrets' cinematics (defined with the cinematic player)
 local busy = false -- mid-throw
 local camera = workspace.CurrentCamera
 
@@ -130712,11 +130729,7 @@ local function refreshRobuxShop()
 end
 
 -- egg hatch reveal: a row of the hatched animals, rarest called out
-Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
-	if robuxFrame.Visible then
-		robuxFrame.Visible = false
-		openPanel = nil
-	end
+local function hatchCard(eggName: string, results)
 	local best = 0
 	local n = math.min(#results, 10)
 	local holder = make("Frame", { Size = UDim2.fromOffset(math.min(n, 5) * 150 + 30, (n > 5 and 2 or 1) * 170 + 80), Position = UDim2.fromScale(0.5, 0.45),
@@ -130750,6 +130763,18 @@ Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
 	task.delay(4.5, function()
 		holder:Destroy()
 	end)
+end
+Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
+	if robuxFrame.Visible then
+		robuxFrame.Visible = false
+		openPanel = nil
+	end
+	for _, a in results do
+		if secretShow and Config.AnimalInfo[a.Name].Rarity == "Secret" then
+			secretShow(a)
+		end
+	end
+	hatchCard(eggName, results)
 end)
 
 -- ---------- ANIMALS (right-docked "My Animals" list, like the original) ----------
@@ -131799,6 +131824,45 @@ local function cinematicPlayer(name: string, rig: Rig, restCF: CFrame, sizeScale
 		end
 	end
 	return step, cine.Length
+end
+
+-- A hatched Secret: it appears a few studs in front of you and plays its cinematic with the name reveal.
+secretShow = function(a)
+	local char = player.Character
+	local hrp = char and char:FindFirstChild("HumanoidRootPart") :: BasePart?
+	if not hrp or busy then
+		return
+	end
+	busy = true
+	hud.Visible = false
+	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
+	local look = Vector3.new(hrp.CFrame.LookVector.X, 0, hrp.CFrame.LookVector.Z).Unit
+	local floor = hrp.Position - Vector3.new(0, (char:FindFirstChildOfClass("Humanoid") :: Humanoid).HipHeight + hrp.Size.Y / 2, 0)
+	local spot = floor + look * 9
+	local restCF = CFrame.lookAt(spot, spot - look) * CFrame.Angles(0, math.pi, 0) -- models face -Z: turn to face you
+	local animal = cloneModel(a.Name, size.Scale)
+	if animal then
+		Mutations.Apply(animal, a.Mutation)
+		local shimmer = Mutations.RainbowParts(animal)
+		local rig = buildRig(animal)
+		local step, length = cinematicPlayer(a.Name, rig, restCF, size.Scale, shimmer)
+		if step then
+			local rc = Config.Rarities[Config.RarityIndex.Secret].Color
+			screenFlash(Color3.new(0, 0, 0), 0.85)
+			task.spawn(letterReveal, (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name, rc)
+			local t0 = os.clock()
+			while os.clock() - t0 < length do
+				step(os.clock() - t0)
+				RunService.RenderStepped:Wait()
+			end
+			step(nil)
+			revealLabel.Visible = false
+		end
+		animal:Destroy()
+	end
+	camera.CameraType = Enum.CameraType.Custom
+	hud.Visible = true
+	busy = false
 end
 
 local function runThrow(r)

@@ -127,31 +127,41 @@ Config.LuckBoostSeconds = 15 * 60
 
 -- Robux shop (layout from the Figma "Roblox shop" frame). Id = developer product / game pass id from the Creator
 -- Dashboard; 0 = button says "not for sale yet". Robux is display only: keep it equal to the dashboard price.
+-- Pass = true: the item is a Game Pass that grants its reward once when bought (a pass can only be bought once per
+-- player). Make it a Developer Product instead to allow repeat buys: paste the product id and remove Pass.
 Config.Shop = {
 	Eggs = {
 		{ Name = "ENCHANTED EGG", Badge = "NEW!", Blurb = "A little magic. A legendary new friend.", Icon = "Icon Egg Enchanted",
 			Pool = {}, -- filled from Config.Exclusives below
-			Buy = { { Key = "Enchanted1", Count = 1, Robux = 72, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 180, Id = 0 },
-				{ Key = "Enchanted10", Count = 10, Robux = 585, Id = 0 } } },
-		{ Name = "RAINBOW EGG", Badge = "LIMITED", Blurb = "Hatch a random Rainbow Huge animal!", Icon = "Icon Egg Rainbow",
-			Mutation = "Rainbow", Size = "Huge", -- pool: every animal, weighted by rarity
-			Buy = { { Key = "Rainbow1", Count = 1, Robux = 90, Id = 0 }, { Key = "Rainbow3", Count = 3, Robux = 225, Id = 0 } } },
+			Buy = { { Key = "Enchanted1", Count = 1, Robux = 35, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 90, Id = 2087890754, Pass = true },
+				{ Key = "Enchanted10", Count = 10, Robux = 299, Id = 2088634776, Pass = true } } },
+		{ Name = "RAINBOW EGG", Badge = "SECRET", Blurb = "GUARANTEED Rainbow Huge SECRET!", Icon = "Icon Egg Rainbow",
+			Mutation = "Rainbow", Size = "Huge", Pool = {}, -- pool: every Secret pet, equal chance (filled below)
+			Buy = { { Key = "Rainbow1", Count = 1, Robux = 45, Id = 2088304776, Pass = true },
+				{ Key = "Rainbow3", Count = 3, Robux = 129, Id = 2088232697, Pass = true } } },
 	},
 	-- packs grow as you get richer: the bigger of Seconds of income or Share of the cash you hold (see CashPackValue)
 	CashPacks = {
-		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 22, Id = 0 },
-		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 54, Id = 0, Tag = "GOOD VALUE" },
-		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 72, Id = 0, Tag = "GREAT VALUE" },
-		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 180, Id = 0, Tag = "BEST VALUE" },
+		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 11, Id = 2088400723, Pass = true },
+		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 29, Id = 2089612769, Pass = true, Tag = "GOOD VALUE" },
+		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 39, Id = 2088856705, Pass = true, Tag = "GREAT VALUE" },
+		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 59, Id = 2088118759, Pass = true, Tag = "BEST VALUE" },
 	},
 	MinIncome = 20,
 	Passes = { -- game passes
-		{ Key = "CashPass", Name = "x2 CASH", Text = "Double cash from every animal!", Icon = "Icon Cash", Robux = 90, Id = 0 },
-		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 135, Id = 0 },
+		{ Key = "CashPass", Name = "x2 CASH", Text = "Double cash from every animal!", Icon = "Icon Cash", Robux = 45, Id = 2087968788 },
+		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 75, Id = 2088430721 },
 	},
 }
 for _, e in Config.Exclusives do
 	table.insert(Config.Shop.Eggs[1].Pool, { e.Name, e.Chance })
+end
+for _, z in Config.Zones do
+	for _, a in z.Animals do
+		if a[2] == "Secret" then
+			table.insert(Config.Shop.Eggs[2].Pool, { a[1], 1 })
+		end
+	end
 end
 
 function Config.CashPackValue(pack, income: number, cash: number): number
