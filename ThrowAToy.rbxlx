@@ -131849,7 +131849,7 @@ secretShow = function(a)
 		if step then
 			local rc = Config.Rarities[Config.RarityIndex.Secret].Color
 			screenFlash(Color3.new(0, 0, 0), 0.85)
-			task.spawn(letterReveal, (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name, rc)
+			task.spawn(letterReveal, ((a.Mutation ~= "None" and not a.Name:find(a.Mutation, 1, true)) and a.Mutation .. " " or "") .. a.Name, rc)
 			local t0 = os.clock()
 			while os.clock() - t0 < length do
 				step(os.clock() - t0)
