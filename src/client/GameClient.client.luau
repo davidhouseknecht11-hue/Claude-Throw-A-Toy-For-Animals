@@ -14,6 +14,7 @@ local Config = require(Shared:WaitForChild("Config"))
 local Util = require(Shared:WaitForChild("Util"))
 local PetRig = require(Shared:WaitForChild("PetRig"))
 local ThrowAnim = require(Shared:WaitForChild("ThrowAnim"))
+local Mutations = require(Shared:WaitForChild("Mutations"))
 local Models = RS:WaitForChild("Models")
 local Sounds = RS:WaitForChild("Sounds")
 local Remotes = RS:WaitForChild("Remotes")
@@ -216,7 +217,7 @@ local function setButtonColor(b: TextButton, color: Color3)
 end
 
 -- 3D thumbnail of a model in a ViewportFrame
-local function viewport(name: string, parent: Instance, silhouette: boolean?, front: boolean?): ViewportFrame?
+local function viewport(name: string, parent: Instance, silhouette: boolean?, front: boolean?, mutation: string?): ViewportFrame?
 	local template = Models:FindFirstChild(name)
 	if not template then
 		return nil
@@ -228,6 +229,7 @@ local function viewport(name: string, parent: Instance, silhouette: boolean?, fr
 	})
 	local m = template:Clone()
 	m:PivotTo(CFrame.new())
+	Mutations.Apply(m, mutation)
 	m.Parent = vf
 	local cf, size = m:GetBoundingBox()
 	local cam = make("Camera", { FieldOfView = 30, Parent = vf })
@@ -679,8 +681,11 @@ Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
 		local cell = make("Frame", { Size = UDim2.fromOffset(140, 160), Position = UDim2.fromOffset(15 + (k - 1) % 5 * 150, 66 + (k - 1) // 5 * 170),
 			BackgroundColor3 = C.White, Parent = holder }, { corner(14), stroke(3), gradient(rc:Lerp(C.White, 0.3), rc:Lerp(C.Dark, 0.3), 90) })
 		local vp = make("Frame", { Size = UDim2.fromScale(0.9, 0.62), Position = UDim2.fromScale(0.05, 0.02), BackgroundTransparency = 1, Parent = cell })
-		viewport(a.Name, vp)
+		viewport(a.Name, vp, nil, nil, a.Mutation)
 		label({ Text = a.Name, Size = UDim2.fromScale(0.94, 0.17), Position = UDim2.fromScale(0.03, 0.64), Parent = cell })
+		if a.Odds and a.Odds >= Config.OneInMin then
+			label({ Text = "1 in " .. Util.Format(a.Odds), Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.02), TextColor3 = SH.Gold, Parent = cell })
+		end
 		local tags = {}
 		if a.Size ~= "Normal" then
 			table.insert(tags, a.Size)
@@ -745,7 +750,7 @@ local function refreshAnimals()
 		local rc = Config.Rarities[Config.RarityIndex[info.Rarity]].Color
 		local row = make("Frame", { LayoutOrder = i, BackgroundColor3 = C.Dark, Parent = animalsList }, { corner(12), stroke(3, a.Placed and C.Green or C.Dark) })
 		local thumb = make("Frame", { Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = rc:Lerp(C.Dark, 0.4), Parent = row }, { corner(10) })
-		viewport(a.Name, thumb)
+		viewport(a.Name, thumb, nil, nil, a.Mutation)
 		local tags = {}
 		if a.Mutation ~= "None" then
 			local mc = (Config.Find(Config.Mutations, a.Mutation).Color :: Color3):ToHex()
@@ -880,6 +885,18 @@ end)
 local function updateTrain()
 	local on = player:GetAttribute("Training") == true
 	trainUI.Visible = on
+	-- the default Animate script keeps playing idle/fall tracks on top of the server's pull-up pose (the arm jitter); pause it
+	local char = player.Character
+	local animate = char and char:FindFirstChild("Animate")
+	local animator = char and char:FindFirstChildWhichIsA("Animator", true)
+	if animate and animate:IsA("LocalScript") then
+		animate.Enabled = not on
+	end
+	if on and animator then
+		for _, track in animator:GetPlayingAnimationTracks() do
+			track:Stop(0)
+		end
+	end
 	if on and Data then
 		local bar = Config.Bars[Data.Bar]
 		trainLabel.Text = string.format("💪 Bar Lv %d  •  +%s power / rep", Data.Bar, Util.Format(bar.PerRep))
@@ -889,7 +906,8 @@ player:GetAttributeChangedSignal("Training"):Connect(updateTrain)
 player:GetAttributeChangedSignal("Power"):Connect(function()
 	if player:GetAttribute("Training") and Data then
 		play("Rep", 0.9 + math.random() * 0.2, 0.5)
-		local pop = label({ Text = "+" .. Util.Format(Config.Bars[Data.Bar].PerRep) .. " 💪", Size = UDim2.fromOffset(160, 40),
+		local perRep = Config.Bars[Data.Bar].PerRep * (Data.Passes and Data.Passes.TrainPass and 2 or 1)
+		local pop = label({ Text = "+" .. Util.Format(perRep) .. " 💪", Size = UDim2.fromOffset(160, 40),
 			Position = UDim2.new(0.5, math.random(-120, 60), 0.55, 0), TextColor3 = Color3.fromRGB(110, 210, 255), Parent = overlay })
 		TweenService:Create(pop, TweenInfo.new(0.8), { Position = pop.Position - UDim2.fromOffset(0, 90), TextTransparency = 1 }):Play()
 		task.delay(0.8, pop.Destroy, pop)
@@ -1170,7 +1188,7 @@ local function resultCard(r)
 	local card = make("Frame", { Size = UDim2.fromOffset(420, 170), Position = UDim2.new(0.5, 0, 0.36, 0), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = C.White, Parent = overlay },
 		{ corner(20), stroke(5), gradient(rc:Lerp(C.White, 0.3), rc:Lerp(C.Dark, 0.35), 90) })
 	local vh = make("Frame", { Size = UDim2.fromOffset(150, 150), Position = UDim2.fromOffset(10, 10), BackgroundTransparency = 1, Parent = card })
-	viewport(a.Name, vh)
+	viewport(a.Name, vh, nil, nil, a.Mutation)
 	label({ Text = r.Rarity:upper(), Size = UDim2.fromOffset(240, 30), Position = UDim2.fromOffset(170, 14), TextXAlignment = Enum.TextXAlignment.Left, Parent = card })
 	local tags = {}
 	if a.Mutation ~= "None" then
@@ -1207,6 +1225,61 @@ local function popText(text: string, color: Color3, yScale: number)
 		TweenService:Create(t, TweenInfo.new(0.4), { TextTransparency = 1 }):Play()
 		task.wait(0.4)
 		t:Destroy()
+	end)
+end
+
+-- "1 in X": the screen dims, the odds count up fast with rising ticks, then slam in with a flash.
+local function commas(n: number): string
+	if n >= 1e7 then
+		return Util.Format(n)
+	end
+	local s = tostring(math.floor(n))
+	return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
+end
+local function oneInReveal(odds: number, color: Color3, onFrame: () -> ())
+	local dim = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, ZIndex = 20, Parent = overlay })
+	TweenService:Create(dim, TweenInfo.new(0.25), { BackgroundTransparency = 0.45 }):Play()
+	local top = label({ Text = "1 in", Size = UDim2.fromOffset(300, 60), Position = UDim2.fromScale(0.5, 0.36), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 21, Parent = overlay, StrokeSize = 5 })
+	local num = label({ Text = "1", Size = UDim2.fromOffset(700, 130), Position = UDim2.fromScale(0.5, 0.47), AnchorPoint = Vector2.new(0.5, 0.5), TextColor3 = color, ZIndex = 21, Parent = overlay, StrokeSize = 8 })
+	local sc = make("UIScale", { Scale = 0.6, Parent = num })
+	local grad = odds >= 10000 and make("UIGradient", { Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 90)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 70)),
+		ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 230, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 90, 255)) }), Parent = num })
+	bounce(top)
+	local countT, t0, lastTick = 1.3, os.clock(), 0
+	while os.clock() - t0 < Config.OneInSeconds do
+		local k = math.min((os.clock() - t0) / countT, 1)
+		local eased = 1 - (1 - k) ^ 3
+		num.Text = commas(math.max(1, math.floor(odds ^ eased))) -- grows through the orders of magnitude
+		sc.Scale = 0.6 + 0.35 * eased
+		if k < 1 and os.clock() - lastTick > 0.07 then
+			lastTick = os.clock()
+			play("Tick", 0.8 + eased * 1.2, 0.6)
+		end
+		if k >= 1 and num:GetAttribute("Done") == nil then
+			num:SetAttribute("Done", true)
+			num.Text = commas(odds)
+			sc.Scale = 1.45
+			TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+			screenFlash(color, 0.6)
+			shake(odds >= 10000 and 2 or 1.2)
+			play(odds >= 1000 and "Legendary" or "Rare")
+		end
+		if grad then
+			grad.Rotation = (os.clock() * 120) % 360
+		end
+		onFrame()
+		RunService.RenderStepped:Wait()
+	end
+	for _, g in { top, num } do
+		TweenService:Create(g, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()
+		TweenService:Create(g.UIStroke, TweenInfo.new(0.25), { Transparency = 1 }):Play()
+	end
+	TweenService:Create(dim, TweenInfo.new(0.25), { BackgroundTransparency = 1 }):Play()
+	task.delay(0.3, function()
+		dim:Destroy()
+		top:Destroy()
+		num:Destroy()
 	end)
 end
 
@@ -1316,6 +1389,11 @@ local function runThrow(r)
 	local a = r.Animal
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 	local animal = cloneModel(a.Name, size.Scale)
+	local shimmer = {}
+	if animal then
+		Mutations.Apply(animal, a.Mutation)
+		shimmer = Mutations.RainbowParts(animal)
+	end
 	local rig = animal and buildRig(animal)
 	local from = landing + Vector3.new(0, 0, -34)
 	local to = landing + Vector3.new(0, 0, -4.5)
@@ -1343,6 +1421,14 @@ local function runThrow(r)
 	end
 	burst(to, C.Gold, 18, 18)
 	play("Munch")
+	if r.OneIn then
+		oneInReveal(r.Odds, rc, function()
+			if rig then
+				pose(rig, restCF * CFrame.new(0, math.abs(math.sin(os.clock() * 7)) * 0.5, 0), os.clock(), false)
+			end
+			Mutations.Shimmer(shimmer, os.clock())
+		end)
+	end
 
 	letterReveal(a.Name, rc)
 	local ri = Config.RarityIndex[r.Rarity]
@@ -1375,6 +1461,7 @@ local function runThrow(r)
 		if rig then -- happy hop + idle while the camera orbits
 			pose(rig, restCF * CFrame.new(0, math.abs(math.sin(os.clock() * 7)) * 0.5, 0), os.clock(), false)
 		end
+		Mutations.Shimmer(shimmer, os.clock())
 		local center = to + Vector3.new(0, 2.2 * size.Scale, 0)
 		local want = center + Vector3.new(math.sin(k + 0.9) * 13, 4 + size.Scale * 2, math.cos(k + 0.9) * 13)
 		camPos = camPos:Lerp(want, 0.08)
@@ -1459,15 +1546,12 @@ do
 	t.Visible = true
 end
 
-local pets: { [Model]: { Base: CFrame, Rig: Rig?, Highlight: Highlight?, NextHop: number } } = {}
+local pets: { [Model]: { Base: CFrame, Rig: Rig?, Shimmer: { BasePart }, NextHop: number } } = {}
 local function addPet(m: Instance)
 	if not m:IsA("Model") then
 		return
 	end
-	local entry = { Base = m:GetPivot(), Rig = buildRig(m), Highlight = nil, NextHop = os.clock() + math.random() * 8 }
-	if m:GetAttribute("Mutation") == "Rainbow" then
-		entry.Highlight = make("Highlight", { FillTransparency = 0.55, OutlineTransparency = 0.4, Parent = m })
-	end
+	local entry = { Base = m:GetPivot(), Rig = buildRig(m), Shimmer = Mutations.RainbowParts(m), NextHop = os.clock() + math.random() * 8 }
 	pets[m] = entry
 end
 CollectionService:GetInstanceAddedSignal("PlotPet"):Connect(addPet)
@@ -1504,10 +1588,7 @@ RunService.Heartbeat:Connect(function(dt)
 			end
 		end
 		pose(e.Rig, e.Base * CFrame.new(0, y, 0), now, false)
-		if e.Highlight then
-			e.Highlight.FillColor = Color3.fromHSV((now * 0.25 + e.Rig.Phase) % 1, 0.8, 1)
-			e.Highlight.OutlineColor = Color3.fromHSV((now * 0.25 + e.Rig.Phase + 0.5) % 1, 0.8, 1)
-		end
+		Mutations.Shimmer(e.Shimmer, now + e.Rig.Phase)
 	end
 end)
 

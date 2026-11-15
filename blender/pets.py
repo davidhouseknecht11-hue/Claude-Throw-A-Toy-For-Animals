@@ -594,3 +594,35 @@ for ang in (-55, -28, 28, 55):
         a.b(bx["size"], (px + c * x - s * y, py + s * x + c * y, z), bx["color"], "tail", (rx[0], rx[1], rx[2] + ang), bx["kind"])
 for bx in [b for b in a.boxes if b["bone"] == "tail" and b["color"] == "B65CFF"]:
     bx["kind"] = "neon"  # glowing tail tips
+
+
+# =============================== MUTATION PROPS (attached at runtime by Shared/Mutations) ===============================
+# Built at a nominal size; the game scales them to each pet. Base sits on z=0.
+a = Brick("Mut Crown", "Mutations")
+a.b((1.0, 1.0, 0.28), (0, 0, 0.14), "FFC21C").b((1.06, 1.06, 0.08), (0, 0, 0.04), "E8A010")
+for x, y in ((-0.4, 0.4), (0.4, 0.4), (-0.4, -0.4), (0.4, -0.4)):
+    a.b((0.2, 0.2, 0.3), (x, y, 0.43), "FFC21C").b((0.12, 0.12, 0.12), (x, y, 0.64), "FFE45C", kind="neon")
+for x, y in ((0, 0.4), (0, -0.4), (0.4, 0), (-0.4, 0)):
+    a.b((0.2, 0.2, 0.42), (x, y, 0.49), "FFC21C")
+a.b((0.22, 0.08, 0.16), (0, 0.53, 0.15), "FF3B6B", kind="neon").b((0.08, 0.22, 0.16), (0.53, 0, 0.15), "3AA8FF", kind="neon")
+a.b((0.08, 0.22, 0.16), (-0.53, 0, 0.15), "4CD964", kind="neon")
+
+a = Brick("Mut Rainbow", "Mutations")
+import math as _mm
+BANDS = ["FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "9B5CFF"]
+for i, col in enumerate(BANDS):
+    r = 2.0 - i * 0.16
+    n = 7
+    for k in range(n):
+        t = _mm.pi * (k + 0.5) / n
+        seg = 2 * r * _mm.sin(_mm.pi / n / 2) * 1.08
+        a.b((seg, 0.24, 0.17), (_mm.cos(t) * r, 0, _mm.sin(t) * r), col, kind="neon", rot=(0, -_mm.degrees(t) + 90, 0))
+for x in (-1.6, 1.6):
+    a.b((0.75, 0.5, 0.35), (x, 0, 0.17), "FFFFFF").b((0.45, 0.4, 0.3), (x + 0.15, 0, 0.42), "FFFFFF").b((0.35, 0.35, 0.25), (x - 0.25, 0, 0.36), "F2F6FF")
+
+a = Brick("Mut Ring", "Mutations")
+for k in range(12):
+    t = 2 * _mm.pi * k / 12
+    a.b((1.1, 0.16, 0.08), (_mm.cos(t) * 2.0, _mm.sin(t) * 2.0, 0), "B47CFF" if k % 2 else "6FD8FF", kind="neon", rot=(0, 0, _mm.degrees(t) + 90))
+for (x, y, z, r, c) in ((2.0, 0.0, 0.0, 0.42, "FF6AD5"), (-1.4, 1.4, 0.0, 0.3, "FFD23C"), (-0.6, -1.9, 0.0, 0.24, "6FF0FF")):
+    a.b((r, r * 0.72, r * 0.72), (x, y, z), c).b((r * 0.72, r, r * 0.72), (x, y, z), c).b((r * 0.72, r * 0.72, r), (x, y, z), c)

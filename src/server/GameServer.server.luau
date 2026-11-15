@@ -10,6 +10,7 @@ local CollectionService = game:GetService("CollectionService")
 local Shared = RS:WaitForChild("Shared")
 local Config = require(Shared:WaitForChild("Config"))
 local Util = require(Shared:WaitForChild("Util"))
+local Mutations = require(Shared:WaitForChild("Mutations"))
 local Models = RS:WaitForChild("Models")
 local Map = workspace:WaitForChild("Map")
 local PlotsFolder = Map:WaitForChild("Plots")
@@ -159,11 +160,7 @@ local function decoratePet(model: Model, a: Animal)
 	local mut = Config.Find(Config.Mutations, a.Mutation)
 	local root = model.PrimaryPart
 	if mut and mut.Color and root then
-		for _, p in model:GetDescendants() do
-			if p:IsA("BasePart") and p ~= root and p.Material ~= Enum.Material.Neon then
-				p.Color = p.Color:Lerp(mut.Color, a.Mutation == "Golden" and 0.6 or 0.35)
-			end
-		end
+		Mutations.Apply(model, a.Mutation)
 		local pe = Instance.new("ParticleEmitter")
 		pe.Texture = "rbxasset://textures/particles/sparkles_main.dds"
 		pe.Color = ColorSequence.new(mut.Color)
@@ -174,13 +171,6 @@ local function decoratePet(model: Model, a: Animal)
 		pe.Speed = NumberRange.new(1, 2)
 		pe.SpreadAngle = Vector2.new(180, 180)
 		pe.Parent = root
-		if a.Mutation == "Cosmic" then
-			local h = Instance.new("Highlight")
-			h.FillTransparency = 0.75
-			h.FillColor = mut.Color
-			h.OutlineColor = Color3.fromRGB(190, 160, 255)
-			h.Parent = model
-		end
 	end
 	model:SetAttribute("Mutation", a.Mutation)
 	model:SetAttribute("AnimalId", a.Id)
@@ -365,6 +355,11 @@ local function stopTraining(player: Player)
 		return
 	end
 	prof.Training = false
+	prof.TrainToken = (prof.TrainToken or 0) + 1 -- ends the rep loop even if training restarts before it wakes
+	for _, tw in prof.TrainTweens or {} do
+		tw:Cancel() -- a running rep tween would keep moving the body / arms after we reset them
+	end
+	prof.TrainTweens = nil
 	player:SetAttribute("Training", false)
 	local spot = prof.Plot and prof.Plot:FindFirstChild("TrainSpot")
 	local trainPrompt = spot and spot:FindFirstChildOfClass("ProximityPrompt")
@@ -427,15 +422,24 @@ local function startTraining(player: Player)
 	for _, j in joints do
 		(j.T :: any)[j.Prop] = pullPose(j, 0)
 	end
+	local token = (prof.TrainToken or 0) + 1
+	prof.TrainToken = token
 	task.spawn(function()
 		local info = TweenInfo.new(Config.RepSeconds / 2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, 0, true)
-		while prof.Training and player.Parent and hrp.Parent do
-			TweenService:Create(hrp, info, { CFrame = high }):Play()
+		while prof.TrainToken == token and player.Parent and hrp.Parent do
+			-- every rep starts from the exact dead-hang pose, so tiny drift can't build up into a glitch
+			hrp.CFrame = low
+			local tweens = { TweenService:Create(hrp, info, { CFrame = high }) }
 			for _, j in joints do
-				TweenService:Create(j.T, info, { [j.Prop] = pullPose(j, 1) }):Play()
+				(j.T :: any)[j.Prop] = pullPose(j, 0)
+				table.insert(tweens, TweenService:Create(j.T, info, { [j.Prop] = pullPose(j, 1) }))
+			end
+			prof.TrainTweens = tweens
+			for _, tw in tweens do
+				tw:Play()
 			end
 			task.wait(Config.RepSeconds)
-			if not prof.Training then
+			if prof.TrainToken ~= token then
 				break
 			end
 			prof.Data.Power += Config.Bars[prof.Data.Bar].PerRep * (prof.Passes.TrainPass and 2 or 1)
@@ -444,9 +448,6 @@ local function startTraining(player: Player)
 			if ls then
 				ls.Power.Value = Util.Format(prof.Data.Power)
 			end
-		end
-		if hrp.Parent then
-			hrp.CFrame = low
 		end
 	end)
 end
@@ -482,27 +483,30 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	local toy = Config.ToyInfo[d.Toy] or Config.Toys[1]
 	local boosted = d.LuckUntil > os.time()
 	local luck = Config.LuckAt(dist) * toy.Luck * (boosted and Config.LuckBoost or 1)
-	local pick = Util.Pick(Config.Zones[zone].Animals, function(a)
+	local pick, pA = Util.Pick(Config.Zones[zone].Animals, function(a)
 		local ri = Config.RarityIndex[a[2]]
 		return Config.Rarities[ri].Weight * luck ^ ((ri - 1) / 5)
 	end, rng)
 	local luckSoft = math.min(luck, 60)
-	local size = Util.Pick(Config.Sizes, function(s)
+	local size, pS = Util.Pick(Config.Sizes, function(s)
 		return s.Chance * (s.Name ~= "Normal" and luckSoft ^ 0.15 or 1)
 	end, rng)
-	local mut = Util.Pick(Config.Mutations, function(m)
+	local mut, pM = Util.Pick(Config.Mutations, function(m)
 		return m.Chance * (m.Name ~= "None" and luckSoft ^ 0.2 or 1)
 	end, rng)
+	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation, at this luck
+	local oneIn = odds >= Config.OneInMin
 	local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size.Name, Mutation = mut.Name, Placed = false }
 	local isNew = not d.Index[pick[1]]
 	local landing = Vector3.new(rng:NextNumber(-14, 14), 0, Config.Map.CorridorStartZ - dist)
 	ThrowResult:FireClient(player, {
 		Landing = landing, Distance = dist, Zone = zone, Luck = luck, Perfect = perfect, Rating = rating.Name, PowerGain = powerGain,
 		Animal = animal, Rarity = pick[2], Income = animalIncome(animal), New = isNew, Toy = d.Toy, Boosted = boosted,
+		Odds = odds, OneIn = oneIn,
 	})
 	player:SetAttribute("Power", d.Power)
 	ThrowFX:FireAllClients(player)
-	task.delay(Config.FlightTime(dist) + Config.RevealSeconds, function()
+	task.delay(Config.FlightTime(dist) + Config.RevealSeconds + (oneIn and Config.OneInSeconds or 0), function()
 		if Profiles[player] ~= prof then
 			return
 		end
@@ -881,8 +885,7 @@ Players.PlayerAdded:Connect(function(player)
 		end
 	end
 	player.CharacterAdded:Connect(function(char)
-		prof.Training = false
-		player:SetAttribute("Training", false)
+		stopTraining(player)
 		task.wait(0.2)
 		sendHome(player)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
@@ -945,15 +948,22 @@ end
 local function hatch(player: Player, prof, egg, count: number)
 	local d, results = prof.Data, {}
 	for _ = 1, count do
-		local pick = Util.Pick(egg.Pool or allAnimals, function(e)
+		local pick, chance = Util.Pick(egg.Pool or allAnimals, function(e)
 			return e[2]
 		end, rng)
-		local size = egg.Size or Util.Pick(Config.Sizes, function(sz) return sz.Chance end, rng).Name
-		local mut = egg.Mutation or Util.Pick(Config.Mutations, function(m) return m.Chance end, rng).Name
+		local size, mut = egg.Size, egg.Mutation
+		if not size then
+			local s, p = Util.Pick(Config.Sizes, function(sz) return sz.Chance end, rng)
+			size, chance = s.Name, chance * p
+		end
+		if not mut then
+			local m, p = Util.Pick(Config.Mutations, function(mm) return mm.Chance end, rng)
+			mut, chance = m.Name, chance * p
+		end
 		local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size, Mutation = mut, Placed = false }
 		d.Index[pick[1]] = true
 		addAnimal(player, animal)
-		table.insert(results, animal)
+		table.insert(results, { Name = animal.Name, Size = size, Mutation = mut, Odds = math.max(1, math.floor(1 / chance + 0.5)) })
 	end
 	HatchEvent:FireClient(player, egg.Name, results)
 end

@@ -31,19 +31,21 @@ function Util.Format(n: number): string
 end
 
 -- items: array; weightOf(item) -> number. rng: Random.
-function Util.Pick<T>(items: { T }, weightOf: (T) -> number, rng: Random): T
+-- Weighted pick; also returns the chance (0..1) of what was picked, for the "1 in X" reveal.
+function Util.Pick<T>(items: { T }, weightOf: (T) -> number, rng: Random): (T, number)
 	local total = 0
 	for _, it in items do
 		total += weightOf(it)
 	end
 	local r = rng:NextNumber() * total
 	for _, it in items do
-		r -= weightOf(it)
+		local w = weightOf(it)
+		r -= w
 		if r <= 0 then
-			return it
+			return it, w / total
 		end
 	end
-	return items[#items]
+	return items[#items], weightOf(items[#items]) / total
 end
 
 function Util.Time(seconds: number): string
