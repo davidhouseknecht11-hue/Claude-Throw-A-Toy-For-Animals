@@ -129100,7 +129100,10 @@ local function renderPlot(prof)
 	local pets = plot:FindFirstChild("Pets") or Instance.new("Folder")
 	pets.Name = "Pets"
 	pets.Parent = plot
-	pets:ClearAllChildren()
+	local existing = {}
+	for _, m in pets:GetChildren() do
+		existing[m:GetAttribute("AnimalId") or ""] = m
+	end
 	local floor = plot:WaitForChild("Floor") :: BasePart
 	local cols = 6
 	local spacingX = (floor.Size.X - 8) / (cols - 1)
@@ -129115,6 +129118,21 @@ local function renderPlot(prof)
 		end
 		local row, col = i // cols, i % cols
 		i += 1
+		local info = Config.AnimalInfo[a.Name]
+		local rc = Config.Rarities[Config.RarityIndex[info.Rarity]].Color
+		local prefix = (a.Mutation ~= "None" and (a.Mutation .. " ") or "") .. (a.Size ~= "Normal" and (a.Size .. " ") or "")
+		local text = string.format('<font color="#%s">%s%s</font>\n<font color="#7CFF6B">$%s/s</font>', hex(rc), prefix, a.Name,
+			Util.Format(animalIncome(a)))
+		local kept = existing[a.Id]
+		if kept then -- already on the plot: leave it where it is, just refresh its income label
+			existing[a.Id] = nil
+			local gui = kept.PrimaryPart and kept.PrimaryPart:FindFirstChildOfClass("BillboardGui")
+			local lbl = gui and gui:FindFirstChildOfClass("TextLabel")
+			if lbl then
+				lbl.Text = text
+			end
+			continue
+		end
 		local m = template:Clone()
 		local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 		m:ScaleTo(size.Scale)
@@ -129123,14 +129141,13 @@ local function renderPlot(prof)
 		m:PivotTo(floor.CFrame * local_)
 		decoratePet(m, a)
 		m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- with streaming on, the whole pet arrives at once (the animator needs every brick)
-		local info = Config.AnimalInfo[a.Name]
-		local rc = Config.Rarities[Config.RarityIndex[info.Rarity]].Color
 		local _, ext = m:GetBoundingBox()
-		local prefix = (a.Mutation ~= "None" and (a.Mutation .. " ") or "") .. (a.Size ~= "Normal" and (a.Size .. " ") or "")
 		local _, label = billboard(m.PrimaryPart :: BasePart, UDim2.fromOffset(150, 44), Vector3.new(0, ext.Y + 1.2, 0), 70)
-		label.Text = string.format('<font color="#%s">%s%s</font>\n<font color="#7CFF6B">$%s/s</font>', hex(rc), prefix, a.Name,
-			Util.Format(animalIncome(a)))
+		label.Text = text
 		m.Parent = pets
+	end
+	for _, m in existing do -- picked up, sold or gone
+		m:Destroy()
 	end
 	-- signs for the owner
 	local d = prof.Data
@@ -129249,7 +129266,8 @@ local function holdPet(player: Player, prof)
 	m = m:Clone()
 	local _, ext = m:GetBoundingBox()
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
-	m:ScaleTo(2.4 / math.max(ext.X, ext.Y, ext.Z) * size.Scale ^ 0.35) -- ~2.5 studs in the hand, bigger sizes a bit bigger
+	local k = 2.4 / math.max(ext.X, ext.Y, ext.Z) * size.Scale -- ~2.5 studs for a normal pet; Big / Large / Huge scale up like on the plot
+	m:ScaleTo(k)
 	Mutations.Apply(m, a.Mutation)
 	local tool = Instance.new("Tool")
 	tool.Name = (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name
@@ -129258,7 +129276,7 @@ local function holdPet(player: Player, prof)
 	tool:SetAttribute("Animal", a.Name) -- clients animate it with this pet's rig
 	tool:SetAttribute("PetScale", m:GetScale())
 	CollectionService:AddTag(tool, "HeldPet")
-	tool.Grip = CFrame.new(0, -0.35, 0.6) -- sits upright on the palm, a little in front of the hand, facing forward
+	tool.Grip = CFrame.new(0, -0.35, 0.6 * size.Scale) -- upright on the palm, in front of the hand (bigger pets further out)
 	local root = m.PrimaryPart :: BasePart
 	root.Name = "Handle"
 	for _, p in m:GetChildren() do
