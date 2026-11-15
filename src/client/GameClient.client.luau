@@ -1236,51 +1236,95 @@ local function commas(n: number): string
 	local s = tostring(math.floor(n))
 	return (s:reverse():gsub("(%d%d%d)", "%1,"):reverse():gsub("^,", ""))
 end
-local function oneInReveal(odds: number, color: Color3, onFrame: () -> ())
-	local dim = make("Frame", { Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 1, ZIndex = 20, Parent = overlay })
-	TweenService:Create(dim, TweenInfo.new(0.25), { BackgroundTransparency = 0.45 }):Play()
-	local top = label({ Text = "1 in", Size = UDim2.fromOffset(300, 60), Position = UDim2.fromScale(0.5, 0.36), AnchorPoint = Vector2.new(0.5, 0.5), ZIndex = 21, Parent = overlay, StrokeSize = 5 })
-	local num = label({ Text = "1", Size = UDim2.fromOffset(700, 130), Position = UDim2.fromScale(0.5, 0.47), AnchorPoint = Vector2.new(0.5, 0.5), TextColor3 = color, ZIndex = 21, Parent = overlay, StrokeSize = 8 })
-	local sc = make("UIScale", { Scale = 0.6, Parent = num })
-	local grad = odds >= 10000 and make("UIGradient", { Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 90)), ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 230, 70)),
-		ColorSequenceKeypoint.new(0.66, Color3.fromRGB(80, 230, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(220, 90, 255)) }), Parent = num })
-	bounce(top)
-	local countT, t0, lastTick = 1.3, os.clock(), 0
-	while os.clock() - t0 < Config.OneInSeconds do
-		local k = math.min((os.clock() - t0) / countT, 1)
-		local eased = 1 - (1 - k) ^ 3
-		num.Text = commas(math.max(1, math.floor(odds ^ eased))) -- grows through the orders of magnitude
-		sc.Scale = 0.6 + 0.35 * eased
-		if k < 1 and os.clock() - lastTick > 0.07 then
-			lastTick = os.clock()
-			play("Tick", 0.8 + eased * 1.2, 0.6)
+-- Luck tiers shown over the counter as it climbs (like the original's INSANE / LEGENDARY / GODLY / IMPOSSIBLE).
+local LUCK_TIERS = {
+	{ 100, "LUCKY!", Color3.fromRGB(120, 255, 140) },
+	{ 250, "INSANE LUCK!", Color3.fromRGB(90, 230, 255) },
+	{ 1000, "LEGENDARY LUCK!!", Color3.fromRGB(255, 210, 60) },
+	{ 10000, "GODLY LUCK!!!", Color3.fromRGB(200, 120, 255) },
+	{ 100000, "IMPOSSIBLE!!!", Color3.fromRGB(255, 240, 120) },
+}
+
+-- Blender clovers rain through the overhead shot.
+local function cloverRain(center: Vector3, top: number)
+	local c = cloneModel("Icon Clover", 1 + math.random() * 0.8)
+	if not c then
+		return
+	end
+	local from = center + Vector3.new(math.random(-16, 16), top * (0.4 + math.random() * 0.5), math.random(-16, 16))
+	local spin = CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6)
+	c:PivotTo(CFrame.new(from) * spin)
+	local t0, life = os.clock(), 1.4 + math.random() * 0.6
+	task.spawn(function()
+		while os.clock() - t0 < life and c.Parent do
+			local k = (os.clock() - t0) / life
+			c:PivotTo(CFrame.new(from - Vector3.new(0, k * top * 0.55, 0)) * spin * CFrame.Angles(k * 6, k * 9, 0))
+			RunService.RenderStepped:Wait()
 		end
-		if k >= 1 and num:GetAttribute("Done") == nil then
-			num:SetAttribute("Done", true)
-			num.Text = commas(odds)
-			sc.Scale = 1.45
-			TweenService:Create(sc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+		c:Destroy()
+	end)
+end
+
+-- Overhead "1 in X" shot: dark cut, camera high above the catch sinking toward it, counter pill at the top climbing
+-- through the luck tiers while the name reveals, clovers raining, then a slam. Returns the pill (kept up with the card).
+local function oneInReveal(odds: number, color: Color3, center: Vector3, duration: number, onFrame: () -> ()): Frame
+	screenFlash(Color3.new(0, 0, 0), 0.85)
+	local pill = make("Frame", { Size = UDim2.fromOffset(420, 84), Position = UDim2.new(0.5, 0, 0, 92), AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = Color3.fromRGB(20, 20, 30), BackgroundTransparency = 0.45, ZIndex = 20, Parent = overlay },
+		{ make("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
+	local num = label({ Text = "1 in 1", Size = UDim2.fromScale(0.92, 0.84), Position = UDim2.fromScale(0.04, 0.08), ZIndex = 21, Parent = pill, StrokeSize = 5 })
+	local title = label({ Text = "", Size = UDim2.fromOffset(460, 54), Position = UDim2.new(0.5, 0, 0, 34), AnchorPoint = Vector2.new(0.5, 0.5),
+		Rotation = -3, ZIndex = 21, Parent = overlay, StrokeSize = 5 })
+	local psc = make("UIScale", { Parent = pill })
+	local tier = 0
+	local countT = duration - 0.7
+	local t0, lastTick, lastClover = os.clock(), 0, 0
+	local camFrom, camTo = center + Vector3.new(0.01, 46, 4), center + Vector3.new(0.01, 17, 9)
+	while os.clock() - t0 < duration do
+		local el = os.clock() - t0
+		local k = math.min(el / countT, 1)
+		local shown = math.max(1, math.floor(odds ^ (1 - (1 - k) ^ 2.2))) -- races through the orders of magnitude, eases into the real number
+		num.Text = "1 in " .. commas(shown)
+		while LUCK_TIERS[tier + 1] and shown >= LUCK_TIERS[tier + 1][1] do
+			tier += 1
+			title.Text = LUCK_TIERS[tier][2]
+			title.TextColor3 = LUCK_TIERS[tier][3]
+			bounce(title)
+			play("Perfect", 0.9 + tier * 0.08, 0.7)
+		end
+		if k < 1 and os.clock() - lastTick > 0.06 then
+			lastTick = os.clock()
+			play("Tick", 0.8 + k * 1.2, 0.5)
+			psc.Scale = 1.06
+			TweenService:Create(psc, TweenInfo.new(0.06), { Scale = 1 }):Play()
+		end
+		if k >= 1 and not pill:GetAttribute("Done") then
+			pill:SetAttribute("Done", true)
+			num.Text = "1 in " .. commas(odds)
+			psc.Scale = 1.35
+			TweenService:Create(psc, TweenInfo.new(0.35, Enum.EasingStyle.Back), { Scale = 1 }):Play()
 			screenFlash(color, 0.6)
 			shake(odds >= 10000 and 2 or 1.2)
+			shockwave(center, C.White)
+			lightPillar(center, color)
+			confetti(center, 100)
 			play(odds >= 1000 and "Legendary" or "Rare")
 		end
-		if grad then
-			grad.Rotation = (os.clock() * 120) % 360
+		if os.clock() - lastClover > 0.09 then
+			lastClover = os.clock()
+			cloverRain(center, 40)
 		end
+		local ck = 1 - (1 - el / duration) ^ 2
+		camera.CFrame = CFrame.lookAt(camFrom:Lerp(camTo, ck), center) * CFrame.Angles(0, 0, math.rad(ck * 12))
 		onFrame()
 		RunService.RenderStepped:Wait()
 	end
-	for _, g in { top, num } do
-		TweenService:Create(g, TweenInfo.new(0.25), { TextTransparency = 1 }):Play()
-		TweenService:Create(g.UIStroke, TweenInfo.new(0.25), { Transparency = 1 }):Play()
-	end
-	TweenService:Create(dim, TweenInfo.new(0.25), { BackgroundTransparency = 1 }):Play()
-	task.delay(0.3, function()
-		dim:Destroy()
-		top:Destroy()
-		num:Destroy()
+	task.delay(0.4, function()
+		TweenService:Create(title, TweenInfo.new(0.3), { TextTransparency = 1 }):Play()
+		task.wait(0.3)
+		title:Destroy()
 	end)
+	return pill
 end
 
 local function runThrow(r)
@@ -1421,16 +1465,20 @@ local function runThrow(r)
 	end
 	burst(to, C.Gold, 18, 18)
 	play("Munch")
+	local pill
 	if r.OneIn then
-		oneInReveal(r.Odds, rc, function()
+		-- the name spells out underneath while the counter climbs (both run together, like the original)
+		task.spawn(letterReveal, a.Name, rc)
+		pill = oneInReveal(r.Odds, rc, to, 1.9 + Config.OneInSeconds, function()
 			if rig then
 				pose(rig, restCF * CFrame.new(0, math.abs(math.sin(os.clock() * 7)) * 0.5, 0), os.clock(), false)
 			end
 			Mutations.Shimmer(shimmer, os.clock())
 		end)
+		camPos = camera.CFrame.Position
+	else
+		letterReveal(a.Name, rc)
 	end
-
-	letterReveal(a.Name, rc)
 	local ri = Config.RarityIndex[r.Rarity]
 	if ri >= 5 then
 		play("Legendary")
@@ -1475,6 +1523,9 @@ local function runThrow(r)
 	end
 	task.delay(0.3, card.Destroy, card)
 	revealLabel.Visible = false
+	if pill then
+		pill:Destroy()
+	end
 	banner.Visible = false
 	if animal then
 		animal:Destroy()
