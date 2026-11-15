@@ -1,0 +1,23 @@
+{
+  "_help": "Upload assets/studs.png and assets/sounds/*.wav in Studio (Asset Manager / Creator Dashboard), paste the rbxassetid:// ids here, then run: python tools/build_place.py",
+  "studs": "rbxassetid://10509831729",
+  "sounds": {
+    "Music": "rbxassetid://72480441481166",
+    "Throw": "rbxassetid://75834949833948",
+    "Zone": "rbxassetid://93193640267527",
+    "Perfect": "rbxassetid://111360107624027",
+    "Land": "rbxassetid://92056860354532",
+    "Buy": "rbxassetid://109062928789357",
+    "Cash": "rbxassetid://127058902919881",
+    "Legendary": "rbxassetid://129439995509016",
+    "Catch": "rbxassetid://99840152912978",
+    "Open": "rbxassetid://112464821480780",
+    "Click": "rbxassetid://124980633624125",
+    "Rare": "rbxassetid://139197407654933",
+    "Footsteps": "rbxassetid://88644428675159",
+    "Rep": "rbxassetid://97156693941974",
+    "Error": "rbxassetid://78381314373036",
+    "Munch": "rbxassetid://103130277013261",
+    "Tick": "rbxassetid://116105052515706"
+  }
+}
