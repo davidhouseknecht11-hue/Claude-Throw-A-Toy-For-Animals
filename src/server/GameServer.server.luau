@@ -550,10 +550,22 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	local toy = Config.ToyInfo[d.Toy] or Config.Toys[1]
 	local boosted = d.LuckUntil > os.time()
 	local luck = Config.LuckAt(dist) * toy.Luck * (boosted and Config.LuckBoost or 1)
-	local pick, pA = Util.Pick(Config.Zones[zone].Animals, function(a)
-		local ri = Config.RarityIndex[a[2]]
-		return Config.Rarities[ri].Weight * luck ^ ((ri - 1) / 5)
-	end, rng)
+	-- each Secret is a flat 1 in 10,000; otherwise the normal luck-weighted pick among the zone's regular animals
+	local secrets, regular = {}, {}
+	for _, a in Config.Zones[zone].Animals do
+		table.insert(a[2] == "Secret" and secrets or regular, a)
+	end
+	local roll = rng:NextNumber()
+	local pick, pA
+	if roll < #secrets * Config.SecretChance then
+		pick, pA = secrets[math.floor(roll / Config.SecretChance) + 1], Config.SecretChance
+	else
+		pick, pA = Util.Pick(regular, function(a)
+			local ri = Config.RarityIndex[a[2]]
+			return Config.Rarities[ri].Weight * luck ^ ((ri - 1) / 5)
+		end, rng)
+		pA *= 1 - #secrets * Config.SecretChance
+	end
 	local luckSoft = math.min(luck, 60)
 	local size, pS = Util.Pick(Config.Sizes, function(s)
 		return s.Chance * (s.Name ~= "Normal" and luckSoft ^ 0.15 or 1)
@@ -1026,7 +1038,9 @@ end
 local allAnimals = {}
 for _, z in Config.Zones do
 	for _, a in z.Animals do
-		table.insert(allAnimals, { a[1], Config.Rarities[Config.RarityIndex[a[2]]].Weight })
+		if a[2] ~= "Secret" then -- secrets only come from throws
+			table.insert(allAnimals, { a[1], Config.Rarities[Config.RarityIndex[a[2]]].Weight })
+		end
 	end
 end
 

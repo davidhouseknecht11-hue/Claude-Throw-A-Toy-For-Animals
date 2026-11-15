@@ -10,7 +10,7 @@ Config.Rarities = {
 	{ Name = "Mythic", Color = Color3.fromRGB(255, 60, 125), Weight = 0.1, Mult = 120 },
 	{ Name = "Exclusive", Color = Color3.fromRGB(0, 255, 210), Weight = 0, Mult = 300 }, -- Enchanted Egg only, never thrown
 	-- ultra-rare throws, each with its own Blender cinematic on the catch; never needed for zone completion
-	{ Name = "Secret", Color = Color3.fromRGB(215, 20, 55), Weight = 0.002, Mult = 500 },
+	{ Name = "Secret", Color = Color3.fromRGB(215, 20, 55), Weight = 0, Mult = 500 }, -- rolled separately: Config.SecretChance
 }
 
 -- Enchanted Egg exclusives: earn like a Fantasy-zone pet x Exclusive rarity x Boost (a Void Kitsune out-earns ~100 Mythics).
@@ -113,6 +113,7 @@ Config.OfflineRate = 0.5
 Config.ThrowCooldown = 1.5 -- seconds after the reveal finishes
 Config.RevealSeconds = 5.5 -- animal walks in, name reveal, result card
 Config.OneInSeconds = 2.4 -- how much longer that reveal runs
+Config.SecretChance = 1 / 10000 -- per throw, for EACH Secret pet in the zone; luck doesn't change it
 Config.SecretSeconds = 3.2 -- a Secret's Blender cinematic runs this much longer than a normal reveal (replaces OneInSeconds)
 
 function Config.FlightTime(distance: number): number
