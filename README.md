@@ -17,7 +17,7 @@ New sounds can take a few minutes to pass Roblox moderation before they play.
    - Optional: `LuckProductId` (100x luck, 15 min) shows a HUD button once set.
 
 ## Gameplay
-- Walk over the white line to throw: the meter shows as you walk up, and its value when you cross sets the throw (green top = PERFECT).
+- Walk over the white line: you lock in place with the meter; tap when it is high (green top = PERFECT).
 - Farther throws reach later zones and higher luck. Luck = distance x toy x boost.
 - Rarity: Common > Uncommon > Rare > Epic > Legendary > Mythic. Sizes: Big/Large/Huge. Mutations: Golden/Rainbow/Cosmic.
 - Train on your plot's pull-up bar for power. Upgrade the bar (pad) and plot slots (sign) with cash.

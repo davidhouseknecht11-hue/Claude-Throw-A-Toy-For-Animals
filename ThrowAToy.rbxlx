@@ -118228,8 +118228,7 @@ local function holdPet(player: Player, prof)
 		end
 	end
 	m:Destroy()
-	tool.Parent = backpack
-	hum:EquipTool(tool)
+	tool.Parent = backpack -- the client equips it (server-side EquipTool doesn't stick on a client-owned character)
 end
 
 -- ===================== TRAINING =====================
@@ -120009,7 +120008,7 @@ for i = 1, 4 do
 end
 make("Frame", { Size = UDim2.new(1, 8, 0.08, 0), Position = UDim2.new(0, -4, 0, 0), BackgroundColor3 = C.White, BackgroundTransparency = 0.5, Parent = meter }, { corner(20) })
 local marker = make("Frame", { Size = UDim2.new(1.5, 0, 0, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 1), BackgroundColor3 = C.White, ZIndex = 3, Parent = meter }, { corner(9), stroke(4) })
-local meterHint = label({ Text = "WALK OVER THE LINE!", Size = UDim2.fromOffset(380, 56), Position = UDim2.new(0.5, 0, 1, 26), AnchorPoint = Vector2.new(0.5, 0), Parent = meter, StrokeSize = 4 })
+local meterHint = label({ Text = "TAP TO THROW!", Size = UDim2.fromOffset(380, 56), Position = UDim2.new(0.5, 0, 1, 26), AnchorPoint = Vector2.new(0.5, 0), Parent = meter, StrokeSize = 4 })
 local meterPct = label({ Text = "", Size = UDim2.fromOffset(100, 40), Position = UDim2.new(1, 16, 0, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = marker })
 
 local onPad = false
@@ -120050,11 +120049,6 @@ local function throwNow()
 	busy = true
 	meter.Visible = false
 	onPad = false
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum:UnequipTools() -- the toy goes in the throwing hand, not the held pet
-	end
-	lockOnPad(true)
 	local sent = throwCount
 	Remotes.Throw:FireServer(meterValue)
 	-- failsafe if the server refused the throw: no result arrived, so hand the camera back
@@ -120067,28 +120061,29 @@ local function throwNow()
 	end)
 end
 
-local lastZ = math.huge
+local lastZ: number? = nil -- nil until the character has a real position, so spawning can't count as a crossing
+player.CharacterAdded:Connect(function()
+	lastZ = nil
+end)
 RunService.RenderStepped:Connect(function(dt)
 	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	local lineZ = ThrowLine.Position.Z
 	local inLane = hrp and math.abs(hrp.Position.X - ThrowLine.Position.X) < ThrowLine.Size.X / 2
 	local ready = inLane and Data and not busy and not player:GetAttribute("Training")
-	-- the meter shows while you walk up to the line; stepping over it throws with whatever the meter reads then
-	local near = ready and hrp.Position.Z > lineZ and hrp.Position.Z < lineZ + 18
-	if ready and lastZ >= lineZ and hrp.Position.Z < lineZ and onPad then
-		lastZ = hrp.Position.Z
-		throwNow()
-		return
-	end
-	lastZ = hrp and hrp.Position.Z or math.huge
-	if near ~= onPad then
-		onPad = near and true or false
-		meter.Visible = onPad
-		setHeld(onPad)
-		if onPad then
-			meterT = 0
-			bounce(meter)
+	-- stepping over the line locks you on it and brings up the meter, the toy and the throw camera; tap to throw
+	local crossed = ready and not onPad and lastZ and lastZ >= lineZ and hrp.Position.Z < lineZ
+	lastZ = hrp and hrp.Position.Z or nil
+	if crossed then
+		onPad = true
+		meterT = 0
+		meter.Visible = true
+		bounce(meter)
+		local hum = player.Character:FindFirstChildOfClass("Humanoid")
+		if hum then
+			hum:UnequipTools() -- the toy goes in the throwing hand, not the held pet
 		end
+		setHeld(true)
+		lockOnPad(true)
 	end
 	if onPad then
 		meterT += dt
@@ -120098,8 +120093,55 @@ RunService.RenderStepped:Connect(function(dt)
 		meterPct.Text = "+" .. Util.Format(gain)
 		meterPct.TextColor3 = rating.Color
 		meterHint.Rotation = math.sin(meterT * 6) * 3
+		-- close over-the-shoulder camera looking down the canyon, like the original
+		camera.CameraType = Enum.CameraType.Scriptable
+		local want = CFrame.lookAt(hrp.Position + Vector3.new(2.4, 1.8, 6.5), hrp.Position + Vector3.new(0, 1.2, -14))
+		camera.CFrame = camera.CFrame:Lerp(want, math.min(1, dt * 8))
 	end
 end)
+
+UIS.InputBegan:Connect(function(input, processed)
+	if processed or not onPad or busy then
+		return
+	end
+	local t = input.UserInputType
+	if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch or input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
+		throwNow()
+	end
+end)
+
+-- ===================== HELD PET =====================
+-- The server puts the held pet's Tool in the Backpack; equip it here once when it arrives (and after throws).
+local function equipHeld(tool: Tool?)
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	local bp = player:FindFirstChildOfClass("Backpack")
+	if not (hum and bp and Data and Data.HeldId) or onPad or busy then
+		return
+	end
+	for _, t in bp:GetChildren() do
+		if (not tool or t == tool) and t:IsA("Tool") and t:GetAttribute("PetId") == Data.HeldId then
+			hum:EquipTool(t)
+			return
+		end
+	end
+end
+local function hookBackpack(bp: Instance)
+	bp.ChildAdded:Connect(function(t)
+		if t:IsA("Tool") and t:GetAttribute("PetId") and not t:GetAttribute("AutoEquipped") then
+			t:SetAttribute("AutoEquipped", true) -- once: unequipping it yourself later keeps it unequipped
+			task.wait(0.1) -- Data with the new HeldId arrives right after the tool
+			equipHeld(t)
+		end
+	end)
+end
+player.ChildAdded:Connect(function(c)
+	if c:IsA("Backpack") then
+		hookBackpack(c)
+	end
+end)
+if player:FindFirstChildOfClass("Backpack") then
+	hookBackpack(player:FindFirstChildOfClass("Backpack") :: Backpack)
+end
 
 -- ===================== THROW SEQUENCE =====================
 local banner = make("Frame", { Size = UDim2.fromOffset(520, 140), Position = UDim2.new(0.5, 0, 0, 20), AnchorPoint = Vector2.new(0.5, 0), BackgroundTransparency = 1, Visible = false, Parent = overlay })
@@ -120556,11 +120598,7 @@ local function runThrow(r)
 	camera.FieldOfView = 70
 	hud.Visible = true
 	lockOnPad(false)
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	local petTool = player:FindFirstChildOfClass("Backpack") and player.Backpack:FindFirstChildOfClass("Tool")
-	if hum and petTool and Data and Data.HeldId then
-		hum:EquipTool(petTool) -- back in your hand after the throw
-	end
+	equipHeld() -- the held pet goes back in your hand after the throw
 	task.wait(Config.ThrowCooldown)
 	busy = false
 end

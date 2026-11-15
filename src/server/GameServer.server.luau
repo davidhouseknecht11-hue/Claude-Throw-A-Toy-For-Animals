@@ -354,8 +354,7 @@ local function holdPet(player: Player, prof)
 		end
 	end
 	m:Destroy()
-	tool.Parent = backpack
-	hum:EquipTool(tool)
+	tool.Parent = backpack -- the client equips it (server-side EquipTool doesn't stick on a client-owned character)
 end
 
 -- ===================== TRAINING =====================
