@@ -493,16 +493,18 @@ sps = sp.add(Item("StarterPlayerScripts", "StarterPlayerScripts"))
 sps.add(script("LocalScript", "GameClient", P("src", "client", "GameClient.client.luau")))
 
 lighting = Item("Lighting", "Lighting")
-lighting.raw(color3("Ambient", "8C8CA0")).raw(color3("OutdoorAmbient", "A0A0B4"))
-lighting.raw('<float name="Brightness">2.6</float>').raw('<float name="ClockTime">14.2</float>')
-lighting.raw('<bool name="GlobalShadows">true</bool>').raw('<float name="EnvironmentDiffuseScale">1</float>').raw('<float name="EnvironmentSpecularScale">0.6</float>')
+# Matched to Throw Food for Animals: high midday sun, bright ambient (short, light shadows), almost no haze so the
+# canyon stays crisp, deep blue sky with puffy clouds (Clouds are added at runtime), and punchy saturated color.
+lighting.raw(color3("Ambient", "7A7A8C")).raw(color3("OutdoorAmbient", "B4B4C8"))
+lighting.raw('<float name="Brightness">3</float>').raw('<float name="ClockTime">13</float>').raw('<float name="ShadowSoftness">0.5</float>')
+lighting.raw('<bool name="GlobalShadows">true</bool>').raw('<float name="EnvironmentDiffuseScale">1</float>').raw('<float name="EnvironmentSpecularScale">0.3</float>')
 atm = lighting.add(Item("Atmosphere", "Atmosphere"))
-atm.raw('<float name="Density">0.28</float>').raw('<float name="Offset">0.1</float>').raw(color3("Color", "C8E6FF")).raw(color3("Decay", "9AC8FF")).raw('<float name="Glare">0.2</float>').raw('<float name="Haze">0.6</float>')
+atm.raw('<float name="Density">0.18</float>').raw('<float name="Offset">0</float>').raw(color3("Color", "C7DCFF")).raw(color3("Decay", "6A9ADC")).raw('<float name="Glare">0</float>').raw('<float name="Haze">0</float>')
 ccx = lighting.add(Item("ColorCorrectionEffect", "ColorCorrection"))
-ccx.raw('<float name="Saturation">0.22</float>').raw('<float name="Contrast">0.08</float>').raw('<float name="Brightness">0.02</float>').raw(color3("TintColor", "FFFFFF"))
+ccx.raw('<float name="Saturation">0.32</float>').raw('<float name="Contrast">0.12</float>').raw('<float name="Brightness">0.03</float>').raw(color3("TintColor", "FFFFFF"))
 bloom = lighting.add(Item("BloomEffect", "Bloom"))
-bloom.raw('<float name="Intensity">0.6</float>').raw('<float name="Size">28</float>').raw('<float name="Threshold">1.6</float>')
-lighting.add(Item("SunRaysEffect", "SunRays")).raw('<float name="Intensity">0.06</float>').raw('<float name="Spread">0.8</float>')
+bloom.raw('<float name="Intensity">0.8</float>').raw('<float name="Size">24</float>').raw('<float name="Threshold">1.3</float>')
+lighting.add(Item("SunRaysEffect", "SunRays")).raw('<float name="Intensity">0.04</float>').raw('<float name="Spread">0.8</float>')
 
 matsvc = Item("MaterialService", "MaterialService")
 for vname, tile in (("Studs", 1.0), ("StudsSmall", 0.25)):

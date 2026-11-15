@@ -117908,6 +117908,12 @@ local Request = remote("RemoteFunction", "Request")
 local HatchEvent = remote("RemoteEvent", "Hatch") -- egg results for the client reveal
 Remotes.Parent = RS
 
+do -- puffy white clouds in a deep blue sky, like the original (Clouds must live under Terrain, so add them here)
+	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover, clouds.Density, clouds.Color = 0.55, 0.75, Color3.new(1, 1, 1)
+	clouds.Parent = workspace.Terrain
+end
+
 local store
 do
 	local ok, s = pcall(function()
@@ -120779,42 +120785,43 @@ updateStats()
 </Item>
 <Item class="Lighting" referent="RBX000017EA"><Properties>
 <string name="Name">Lighting</string>
-<Color3 name="Ambient"><R>0.5490</R><G>0.5490</G><B>0.6275</B></Color3>
-<Color3 name="OutdoorAmbient"><R>0.6275</R><G>0.6275</G><B>0.7059</B></Color3>
-<float name="Brightness">2.6</float>
-<float name="ClockTime">14.2</float>
+<Color3 name="Ambient"><R>0.4784</R><G>0.4784</G><B>0.5490</B></Color3>
+<Color3 name="OutdoorAmbient"><R>0.7059</R><G>0.7059</G><B>0.7843</B></Color3>
+<float name="Brightness">3</float>
+<float name="ClockTime">13</float>
+<float name="ShadowSoftness">0.5</float>
 <bool name="GlobalShadows">true</bool>
 <float name="EnvironmentDiffuseScale">1</float>
-<float name="EnvironmentSpecularScale">0.6</float>
+<float name="EnvironmentSpecularScale">0.3</float>
 </Properties>
 <Item class="Atmosphere" referent="RBX000017EB"><Properties>
 <string name="Name">Atmosphere</string>
-<float name="Density">0.28</float>
-<float name="Offset">0.1</float>
-<Color3 name="Color"><R>0.7843</R><G>0.9020</G><B>1.0000</B></Color3>
-<Color3 name="Decay"><R>0.6039</R><G>0.7843</G><B>1.0000</B></Color3>
-<float name="Glare">0.2</float>
-<float name="Haze">0.6</float>
+<float name="Density">0.18</float>
+<float name="Offset">0</float>
+<Color3 name="Color"><R>0.7804</R><G>0.8627</G><B>1.0000</B></Color3>
+<Color3 name="Decay"><R>0.4157</R><G>0.6039</G><B>0.8627</B></Color3>
+<float name="Glare">0</float>
+<float name="Haze">0</float>
 </Properties>
 </Item>
 <Item class="ColorCorrectionEffect" referent="RBX000017EC"><Properties>
 <string name="Name">ColorCorrection</string>
-<float name="Saturation">0.22</float>
-<float name="Contrast">0.08</float>
-<float name="Brightness">0.02</float>
+<float name="Saturation">0.32</float>
+<float name="Contrast">0.12</float>
+<float name="Brightness">0.03</float>
 <Color3 name="TintColor"><R>1.0000</R><G>1.0000</G><B>1.0000</B></Color3>
 </Properties>
 </Item>
 <Item class="BloomEffect" referent="RBX000017ED"><Properties>
 <string name="Name">Bloom</string>
-<float name="Intensity">0.6</float>
-<float name="Size">28</float>
-<float name="Threshold">1.6</float>
+<float name="Intensity">0.8</float>
+<float name="Size">24</float>
+<float name="Threshold">1.3</float>
 </Properties>
 </Item>
 <Item class="SunRaysEffect" referent="RBX000017EE"><Properties>
 <string name="Name">SunRays</string>
-<float name="Intensity">0.06</float>
+<float name="Intensity">0.04</float>
 <float name="Spread">0.8</float>
 </Properties>
 </Item>

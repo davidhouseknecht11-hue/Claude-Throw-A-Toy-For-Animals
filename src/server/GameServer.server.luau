@@ -34,6 +34,12 @@ local Request = remote("RemoteFunction", "Request")
 local HatchEvent = remote("RemoteEvent", "Hatch") -- egg results for the client reveal
 Remotes.Parent = RS
 
+do -- puffy white clouds in a deep blue sky, like the original (Clouds must live under Terrain, so add them here)
+	local clouds = workspace.Terrain:FindFirstChildOfClass("Clouds") or Instance.new("Clouds")
+	clouds.Cover, clouds.Density, clouds.Color = 0.55, 0.75, Color3.new(1, 1, 1)
+	clouds.Parent = workspace.Terrain
+end
+
 local store
 do
 	local ok, s = pcall(function()
