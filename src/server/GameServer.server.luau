@@ -339,6 +339,9 @@ local function holdPet(player: Player, prof)
 	tool.Name = (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name
 	tool.CanBeDropped = false
 	tool:SetAttribute("PetId", a.Id)
+	tool:SetAttribute("Animal", a.Name) -- clients animate it with this pet's rig
+	tool:SetAttribute("PetScale", m:GetScale())
+	CollectionService:AddTag(tool, "HeldPet")
 	tool.Grip = CFrame.new(0, -0.35, 0.6) -- sits upright on the palm, a little in front of the hand, facing forward
 	local root = m.PrimaryPart :: BasePart
 	root.Name = "Handle"
@@ -346,9 +349,11 @@ local function holdPet(player: Player, prof)
 		if p:IsA("BasePart") then
 			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = false, false, false, false, true
 			if p ~= root then
-				local w = Instance.new("WeldConstraint")
+				local w = Instance.new("Weld") -- a Weld (not WeldConstraint) so clients can pose each bone through C0
+				w.Name = p.Name
 				w.Part0, w.Part1 = root, p
-				w.Parent = root
+				w.C0 = root.CFrame:ToObjectSpace(p.CFrame)
+				w.Parent = p
 			end
 			p.Parent = tool
 		end

@@ -118213,6 +118213,9 @@ local function holdPet(player: Player, prof)
 	tool.Name = (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name
 	tool.CanBeDropped = false
 	tool:SetAttribute("PetId", a.Id)
+	tool:SetAttribute("Animal", a.Name) -- clients animate it with this pet's rig
+	tool:SetAttribute("PetScale", m:GetScale())
+	CollectionService:AddTag(tool, "HeldPet")
 	tool.Grip = CFrame.new(0, -0.35, 0.6) -- sits upright on the palm, a little in front of the hand, facing forward
 	local root = m.PrimaryPart :: BasePart
 	root.Name = "Handle"
@@ -118220,9 +118223,11 @@ local function holdPet(player: Player, prof)
 		if p:IsA("BasePart") then
 			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = false, false, false, false, true
 			if p ~= root then
-				local w = Instance.new("WeldConstraint")
+				local w = Instance.new("Weld") -- a Weld (not WeldConstraint) so clients can pose each bone through C0
+				w.Name = p.Name
 				w.Part0, w.Part1 = root, p
-				w.Parent = root
+				w.C0 = root.CFrame:ToObjectSpace(p.CFrame)
+				w.Parent = p
 			end
 			p.Parent = tool
 		end
@@ -120639,15 +120644,47 @@ do
 	t.Visible = true
 end
 
-local pets: { [Model]: { Base: CFrame, Rig: Rig?, Shimmer: { BasePart }, NextHop: number } } = {}
+-- Pen pets wander their plot: pick a random spot on the floor, walk there (walk cycle, turning smoothly), idle, repeat.
+-- Client-side only, so each player sees their own wandering (positions aren't synced).
+type PenPet = { Pos: CFrame, Rig: Rig?, Shimmer: { BasePart }, Floor: BasePart?, Target: Vector3?, NextMove: number, Speed: number }
+local pets: { [Model]: PenPet } = {}
 local function addPet(m: Instance)
 	if not m:IsA("Model") then
 		return
 	end
-	local entry = { Base = m:GetPivot(), Rig = buildRig(m), Shimmer = Mutations.RainbowParts(m), NextHop = os.clock() + math.random() * 8 }
-	pets[m] = entry
+	local plot = m.Parent and m.Parent.Parent
+	pets[m] = { Pos = m:GetPivot(), Rig = buildRig(m), Shimmer = Mutations.RainbowParts(m), Floor = plot and plot:FindFirstChild("Floor") :: BasePart?,
+		Target = nil, NextMove = os.clock() + math.random() * 4, Speed = (3 + math.random() * 1.5) * m:GetScale() ^ 0.5 }
 end
 CollectionService:GetInstanceAddedSignal("PlotPet"):Connect(addPet)
+
+-- held pets (Tools built by the server): the same idle / walk bone animation, applied through each part's Weld
+local held: { [Instance]: { Welds: { any }, Pivots: { [string]: Vector3 }, Shimmer: { BasePart }, Phase: number } } = {}
+local function addHeld(tool: Instance)
+	local piv = PetRig[tool:GetAttribute("Animal") or ""] or {}
+	local scale = tool:GetAttribute("PetScale") or 1
+	local pivots = {}
+	for bone, v in piv do
+		pivots[bone] = v * scale
+	end
+	local welds = {}
+	for _, w in tool:GetDescendants() do
+		if w:IsA("Weld") and w.Part1 then
+			table.insert(welds, { w, w.Part1.Name, w.C0 })
+		end
+	end
+	held[tool] = { Welds = welds, Pivots = pivots, Shimmer = Mutations.RainbowParts(tool :: any), Phase = math.random() * 10 }
+end
+CollectionService:GetInstanceAddedSignal("HeldPet"):Connect(function(tool)
+	task.wait() -- let the welds replicate with it
+	addHeld(tool)
+end)
+CollectionService:GetInstanceRemovedSignal("HeldPet"):Connect(function(tool)
+	held[tool] = nil
+end)
+for _, tool in CollectionService:GetTagged("HeldPet") do
+	addHeld(tool)
+end
 CollectionService:GetInstanceRemovedSignal("PlotPet"):Connect(function(m)
 	pets[m :: Model] = nil
 end)
@@ -120660,6 +120697,7 @@ RunService.Heartbeat:Connect(function(dt)
 	if acc < 1 / 30 then
 		return
 	end
+	local step = acc
 	acc = 0
 	local now = os.clock()
 	local camP = camera.CFrame.Position
@@ -120668,20 +120706,50 @@ RunService.Heartbeat:Connect(function(dt)
 			pets[m] = nil
 			continue
 		end
-		if not e.Rig or (e.Base.Position - camP).Magnitude > 140 then
+		if not e.Rig or (e.Pos.Position - camP).Magnitude > 140 then
 			continue
 		end
-		-- occasional happy hop, otherwise a gentle breathing bob
-		local hopT = now - e.NextHop
-		local y = math.sin(now * 2.4 + e.Rig.Phase) * 0.04
-		if hopT > 0 then
-			y = math.sin(math.min(hopT / 0.45, 1) * math.pi) * 0.9
-			if hopT > 0.45 then
-				e.NextHop = now + 4 + math.random() * 8
+		local walking = false
+		if e.Target then
+			local p = e.Pos.Position
+			local to = Vector3.new(e.Target.X - p.X, 0, e.Target.Z - p.Z)
+			if to.Magnitude <= e.Speed * step then
+				e.Target, e.NextMove = nil, now + 1.5 + math.random() * 4
+			else
+				walking = true
+				local look = e.Pos.LookVector:Lerp(to.Unit, math.min(1, step * 6)) -- turn into the walk instead of snapping
+				local np = p + to.Unit * e.Speed * step
+				e.Pos = CFrame.lookAt(np, np + Vector3.new(look.X, 0, look.Z))
 			end
+		elseif now > e.NextMove and e.Floor then
+			local f = e.Floor
+			local lx, lz = (math.random() - 0.5) * (f.Size.X - 8), (math.random() - 0.5) * (f.Size.Z - 8)
+			local spot = f.CFrame:PointToWorldSpace(Vector3.new(lx, 0, lz))
+			e.Target = Vector3.new(spot.X, e.Pos.Position.Y, spot.Z)
 		end
-		pose(e.Rig, e.Base * CFrame.new(0, y, 0), now, false)
+		local y = walking and math.abs(math.sin(now * 11 + e.Rig.Phase)) * 0.18 or math.sin(now * 2.4 + e.Rig.Phase) * 0.04
+		pose(e.Rig, e.Pos * CFrame.new(0, y, 0), now, walking)
 		Mutations.Shimmer(e.Shimmer, now + e.Rig.Phase)
+	end
+	-- held pets: pose each bone through its weld, walking when the holder walks
+	for tool, h in held do
+		if not tool.Parent then
+			held[tool] = nil
+			continue
+		end
+		local char = tool.Parent
+		local hum = char:FindFirstChildOfClass("Humanoid")
+		if not hum then
+			continue -- in a Backpack, not in a hand
+		end
+		local walking = hum.MoveDirection.Magnitude > 0.1
+		local t = now + h.Phase
+		for _, w in h.Welds do
+			local r = boneRot(w[2], t, walking)
+			local pv = h.Pivots[w[2]]
+			w[1].C0 = (r and pv) and (CFrame.new(pv) * r * CFrame.new(-pv) * w[3]) or w[3]
+		end
+		Mutations.Shimmer(h.Shimmer, t)
 	end
 end)
 
