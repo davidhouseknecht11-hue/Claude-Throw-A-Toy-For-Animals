@@ -250,7 +250,7 @@ local function snapshot(prof)
 	end
 	return {
 		Cash = d.Cash, Power = d.Power, Toys = d.Toys, Toy = d.Toy, Bar = d.Bar, Slots = d.Slots, Animals = animals,
-		Index = d.Index, LuckUntil = d.LuckUntil, Income = totalIncome(prof), IndexBonus = indexBonus(d),
+		Index = d.Index, LuckUntil = d.LuckUntil, Income = totalIncome(prof), IndexBonus = indexBonus(d), HeldId = prof.HeldId,
 		Passes = prof.Passes, ServerTime = os.time(),
 	}
 end
@@ -304,6 +304,58 @@ local function findAnimal(d, id: string): (Animal?, number?)
 		end
 	end
 	return nil, nil
+end
+
+-- ===================== HOLDING A PET =====================
+-- The held pet is a Tool (shows in the hotbar, default hold pose) built from the pet's own bricks, welded to its root.
+local function holdPet(player: Player, prof)
+	local char = player.Character
+	local hum = char and char:FindFirstChildOfClass("Humanoid")
+	local backpack = player:FindFirstChildOfClass("Backpack")
+	local a = prof.HeldId and findAnimal(prof.Data, prof.HeldId)
+	if not a then
+		prof.HeldId = nil
+	end
+	for _, where in { char, backpack } do
+		for _, t in where and where:GetChildren() or {} do
+			if t:IsA("Tool") and t:GetAttribute("PetId") and t:GetAttribute("PetId") ~= prof.HeldId then
+				t:Destroy()
+			end
+		end
+	end
+	if not (a and hum and backpack) or char:FindFirstChildOfClass("Tool") or backpack:FindFirstChildOfClass("Tool") then
+		return -- nothing to hold, or it's already there
+	end
+	local m = Models:FindFirstChild(a.Name)
+	if not m then
+		return
+	end
+	m = m:Clone()
+	local _, ext = m:GetBoundingBox()
+	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
+	m:ScaleTo(2.4 / math.max(ext.X, ext.Y, ext.Z) * size.Scale ^ 0.35) -- ~2.5 studs in the hand, bigger sizes a bit bigger
+	Mutations.Apply(m, a.Mutation)
+	local tool = Instance.new("Tool")
+	tool.Name = (a.Mutation ~= "None" and a.Mutation .. " " or "") .. a.Name
+	tool.CanBeDropped = false
+	tool:SetAttribute("PetId", a.Id)
+	tool.Grip = CFrame.new(0, -0.35, 0.6) -- sits upright on the palm, a little in front of the hand, facing forward
+	local root = m.PrimaryPart :: BasePart
+	root.Name = "Handle"
+	for _, p in m:GetChildren() do
+		if p:IsA("BasePart") then
+			p.Anchored, p.CanCollide, p.CanQuery, p.CanTouch, p.Massless = false, false, false, false, true
+			if p ~= root then
+				local w = Instance.new("WeldConstraint")
+				w.Part0, w.Part1 = root, p
+				w.Parent = root
+			end
+			p.Parent = tool
+		end
+	end
+	m:Destroy()
+	tool.Parent = backpack
+	hum:EquipTool(tool)
 end
 
 -- ===================== TRAINING =====================
@@ -397,6 +449,10 @@ local function startTraining(player: Player)
 	end
 	prof.Training = true
 	player:SetAttribute("Training", true)
+	local holder = char:FindFirstChildOfClass("Humanoid")
+	if holder then
+		holder:UnequipTools() -- hands on the bar, not on the pet
+	end
 	local trainPrompt = spot:FindFirstChildOfClass("ProximityPrompt")
 	if trainPrompt then
 		trainPrompt.Enabled = false -- don't float "Train" over the player mid-rep
@@ -495,7 +551,7 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 		return m.Chance * (m.Name ~= "None" and luckSoft ^ 0.2 or 1)
 	end, rng)
 	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation, at this luck
-	local oneIn = odds >= Config.OneInMin
+	local oneIn = mut.Name ~= "None" -- any mutation gets the "1 in X" reveal
 	local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size.Name, Mutation = mut.Name, Placed = false }
 	local isNew = not d.Index[pick[1]]
 	local landing = Vector3.new(rng:NextNumber(-14, 14), 0, Config.Map.CorridorStartZ - dist)
@@ -552,6 +608,15 @@ function Actions.Place(player, prof, id: string)
 	return true
 end
 
+function Actions.Hold(player, prof, id: string)
+	if not findAnimal(prof.Data, id) then
+		return false, "Animal not found"
+	end
+	prof.HeldId = prof.HeldId ~= id and id or nil -- tap again to put it away
+	holdPet(player, prof)
+	return true
+end
+
 function Actions.Sell(player, prof, id: string)
 	local d = prof.Data
 	local a, i = findAnimal(d, id)
@@ -561,6 +626,7 @@ function Actions.Sell(player, prof, id: string)
 	local gain = animalIncome(a) * Config.SellSeconds
 	table.remove(d.Animals, i)
 	d.Cash += gain
+	holdPet(player, prof) -- drops it from your hand if it was the held one
 	return true, "Sold " .. a.Name .. " for $" .. Util.Format(gain)
 end
 
@@ -579,6 +645,7 @@ function Actions.SellBackpack(player, prof)
 		return false, "Nothing in your backpack to sell"
 	end
 	d.Cash += gain
+	holdPet(player, prof)
 	return true, string.format("Sold %d animals for $%s", n, Util.Format(gain))
 end
 
@@ -889,6 +956,7 @@ Players.PlayerAdded:Connect(function(player)
 		task.wait(0.2)
 		sendHome(player)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
+		holdPet(player, prof) -- a new character gets the held pet back
 		hum:GetPropertyChangedSignal("Jump"):Connect(function()
 			if hum.Jump then
 				stopTraining(player)

@@ -9,6 +9,8 @@ local GOLD_DARK, GOLD_LIGHT = Color3.fromRGB(150, 92, 8), Color3.fromRGB(255, 22
 local SPACE_DARK, SPACE_LIGHT = Color3.fromRGB(14, 9, 44), Color3.fromRGB(120, 75, 255)
 local STARLIGHT = Color3.fromRGB(160, 130, 255)
 local PROP = { Golden = "Mut Crown", Rainbow = "Mut Rainbow", Cosmic = "Mut Ring" }
+local RAINBOW = { Color3.fromRGB(255, 40, 60), Color3.fromRGB(50, 110, 255), Color3.fromRGB(40, 220, 90) } -- red, blue, green
+local RAINBOW_STEP = 1.1 -- seconds per color
 
 local function lum(c: Color3): number
 	return c.R * 0.299 + c.G * 0.587 + c.B * 0.114
@@ -48,12 +50,8 @@ local function recolor(parts: { BasePart }, mutation: string, pivot: CFrame, lo:
 			p.Color = GOLD_DARK:Lerp(GOLD_LIGHT, math.clamp((l - 0.12) / 0.8, 0, 1))
 			p.Reflectance = 0.25
 		elseif mutation == "Rainbow" then
-			local rel = pivot:PointToObjectSpace(p.Position) - lo
-			local hue = (rel.Z / math.max(span.Z, 0.1) * 0.8 + rel.Y / math.max(span.Y, 0.1) * 0.2) % 1
-			local sat = 0.45 + 0.35 * (1 - l)
-			p.Color = Color3.fromHSV(hue, sat, 1)
-			p:SetAttribute("Hue", hue)
-			p:SetAttribute("Sat", sat)
+			p:SetAttribute("Shade", 0.55 + 0.45 * l) -- keeps the pet's light/dark detail while the color cycles
+			p.Color = RAINBOW[1]:Lerp(Color3.new(), 0.45 - 0.45 * l)
 		elseif mutation == "Cosmic" then
 			if l > 0.82 then
 				p.Material = Enum.Material.Neon
@@ -117,20 +115,33 @@ function Mutations.Apply(model: Model, mutation: string?)
 	attachProp(model, mutation, parts, pivot, lo, hi)
 end
 
--- Rainbow pets shimmer: returns the bricks to recolor each frame with Mutations.Shimmer.
+-- Rainbow pets fade through red -> blue -> green: returns the bricks to recolor each frame with Mutations.Shimmer.
 function Mutations.RainbowParts(model: Model): { BasePart }
 	local out = {}
 	for _, p in model:GetChildren() do
-		if p:IsA("BasePart") and p:GetAttribute("Hue") then
+		if p:IsA("BasePart") and p:GetAttribute("Shade") then
 			table.insert(out, p)
 		end
 	end
 	return out
 end
 
+function Mutations.RainbowColor(t: number): Color3
+	local x = (t / RAINBOW_STEP) % #RAINBOW
+	local i = math.floor(x)
+	local f = x - i
+	f = f * f * (3 - 2 * f) -- smoothstep: holds each color a moment, then glides to the next
+	return RAINBOW[i + 1]:Lerp(RAINBOW[(i + 1) % #RAINBOW + 1], f)
+end
+assert(Mutations.RainbowColor(0) == RAINBOW[1] and Mutations.RainbowColor(RAINBOW_STEP) == RAINBOW[2], "RainbowColor self-check failed")
+
 function Mutations.Shimmer(parts: { BasePart }, t: number)
+	if #parts == 0 then
+		return
+	end
+	local c = Mutations.RainbowColor(t)
 	for _, p in parts do
-		p.Color = Color3.fromHSV(((p:GetAttribute("Hue") :: number) + t * 0.2) % 1, p:GetAttribute("Sat") :: number, 1)
+		p.Color = c:Lerp(Color3.new(), 1 - (p:GetAttribute("Shade") :: number))
 	end
 end
 

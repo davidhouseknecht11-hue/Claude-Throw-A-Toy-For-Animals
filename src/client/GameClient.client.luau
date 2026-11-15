@@ -19,7 +19,7 @@ local Models = RS:WaitForChild("Models")
 local Sounds = RS:WaitForChild("Sounds")
 local Remotes = RS:WaitForChild("Remotes")
 local Map = workspace:WaitForChild("Map")
-local ThrowPad = Map:WaitForChild("ThrowPad") :: BasePart
+local ThrowLine = Map:WaitForChild("ThrowLine") :: BasePart -- walk over it to throw
 
 local Data = nil -- latest server snapshot
 local busy = false -- mid-throw
@@ -683,7 +683,7 @@ Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
 		local vp = make("Frame", { Size = UDim2.fromScale(0.9, 0.62), Position = UDim2.fromScale(0.05, 0.02), BackgroundTransparency = 1, Parent = cell })
 		viewport(a.Name, vp, nil, nil, a.Mutation)
 		label({ Text = a.Name, Size = UDim2.fromScale(0.94, 0.17), Position = UDim2.fromScale(0.03, 0.64), Parent = cell })
-		if a.Odds and a.Odds >= Config.OneInMin then
+		if a.Odds and a.Mutation ~= "None" then
 			label({ Text = "1 in " .. Util.Format(a.Odds), Size = UDim2.fromScale(0.9, 0.16), Position = UDim2.fromScale(0.05, 0.02), TextColor3 = SH.Gold, Parent = cell })
 		end
 		local tags = {}
@@ -768,9 +768,13 @@ local function refreshAnimals()
 				toast(msg, ok and "good" or "bad")
 			end
 		end)
+		local held = Data.HeldId == a.Id
+		button({ Size = UDim2.new(0.145, 0, 0, 36), Position = UDim2.new(0.835, 0, 0, 48), Text = held and "HELD" or "HOLD", Color = held and C.Purple or C.Orange, Parent = row }, function()
+			Remotes.Request:InvokeServer("Hold", a.Id)
+		end)
 		local confirm = false
 		local sell
-		sell = button({ Size = UDim2.new(0.3, 0, 0, 36), Position = UDim2.new(0.68, 0, 0, 48), Text = "SELL", Color = C.Red, Parent = row }, function()
+		sell = button({ Size = UDim2.new(0.145, 0, 0, 36), Position = UDim2.new(0.68, 0, 0, 48), Text = "SELL", Color = C.Red, Parent = row }, function()
 			if not confirm then
 				confirm = true
 				sell.Text = "SURE?"
@@ -1013,7 +1017,7 @@ for i = 1, 4 do
 end
 make("Frame", { Size = UDim2.new(1, 8, 0.08, 0), Position = UDim2.new(0, -4, 0, 0), BackgroundColor3 = C.White, BackgroundTransparency = 0.5, Parent = meter }, { corner(20) })
 local marker = make("Frame", { Size = UDim2.new(1.5, 0, 0, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 1), BackgroundColor3 = C.White, ZIndex = 3, Parent = meter }, { corner(9), stroke(4) })
-local meterHint = label({ Text = "TAP TO THROW!", Size = UDim2.fromOffset(380, 56), Position = UDim2.new(0.5, 0, 1, 26), AnchorPoint = Vector2.new(0.5, 0), Parent = meter, StrokeSize = 4 })
+local meterHint = label({ Text = "WALK OVER THE LINE!", Size = UDim2.fromOffset(380, 56), Position = UDim2.new(0.5, 0, 1, 26), AnchorPoint = Vector2.new(0.5, 0), Parent = meter, StrokeSize = 4 })
 local meterPct = label({ Text = "", Size = UDim2.fromOffset(100, 40), Position = UDim2.new(1, 16, 0, 0), AnchorPoint = Vector2.new(0, 0.5), Parent = marker })
 
 local onPad = false
@@ -1021,7 +1025,7 @@ local throwCount = 0 -- results received; lets the failsafe tell a refused throw
 local meterT = 0
 local meterValue = 0
 
--- Like the original, the pad holds you in place (centered, facing the canyon) until you throw.
+-- Crossing the line holds you in place (centered, facing the canyon) while the throw plays.
 local savedMove: { number }? = nil
 local function lockOnPad(on: boolean)
 	local char = player.Character
@@ -1032,27 +1036,59 @@ local function lockOnPad(on: boolean)
 	end
 	local lift = hum.RigType == Enum.HumanoidRigType.R6 and 3 or hum.HipHeight + hrp.Size.Y / 2
 	local function standAt(offsetZ: number)
-		local p = ThrowPad.Position + Vector3.new(0, ThrowPad.Size.Y / 2 + lift, offsetZ)
+		local p = ThrowLine.Position + Vector3.new(0, ThrowLine.Size.Y / 2 + lift, offsetZ)
 		hrp.CFrame = CFrame.lookAt(p, p + Vector3.new(0, 0, -1))
 		hrp.AssemblyLinearVelocity = Vector3.zero
 	end
 	if on and not savedMove then
 		savedMove = { hum.WalkSpeed, hum.JumpPower, hum.JumpHeight }
 		hum.WalkSpeed, hum.JumpPower, hum.JumpHeight = 0, 0, 0
-		standAt(0)
+		standAt(1.5)
 	elseif not on and savedMove then
 		hum.WalkSpeed, hum.JumpPower, hum.JumpHeight = savedMove[1], savedMove[2], savedMove[3]
 		savedMove = nil
-		standAt(ThrowPad.Size.Z / 2 + 9) -- step back off the pad so it doesn't grab you again instantly
+		standAt(12) -- back behind the line, ready to walk over it again
 	end
 end
 player.CharacterAdded:Connect(function()
 	savedMove = nil -- a new character starts unlocked
 end)
 
+local function throwNow()
+	busy = true
+	meter.Visible = false
+	onPad = false
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum:UnequipTools() -- the toy goes in the throwing hand, not the held pet
+	end
+	lockOnPad(true)
+	local sent = throwCount
+	Remotes.Throw:FireServer(meterValue)
+	-- failsafe if the server refused the throw: no result arrived, so hand the camera back
+	task.delay(3, function()
+		if busy and throwCount == sent then
+			busy = false
+			camera.CameraType = Enum.CameraType.Custom
+			lockOnPad(false)
+		end
+	end)
+end
+
+local lastZ = math.huge
 RunService.RenderStepped:Connect(function(dt)
-	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-	local near = hrp and (hrp.Position - ThrowPad.Position).Magnitude < 11 and not busy and not player:GetAttribute("Training")
+	local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local lineZ = ThrowLine.Position.Z
+	local inLane = hrp and math.abs(hrp.Position.X - ThrowLine.Position.X) < ThrowLine.Size.X / 2
+	local ready = inLane and Data and not busy and not player:GetAttribute("Training")
+	-- the meter shows while you walk up to the line; stepping over it throws with whatever the meter reads then
+	local near = ready and hrp.Position.Z > lineZ and hrp.Position.Z < lineZ + 18
+	if ready and lastZ >= lineZ and hrp.Position.Z < lineZ and onPad then
+		lastZ = hrp.Position.Z
+		throwNow()
+		return
+	end
+	lastZ = hrp and hrp.Position.Z or math.huge
 	if near ~= onPad then
 		onPad = near and true or false
 		meter.Visible = onPad
@@ -1060,9 +1096,6 @@ RunService.RenderStepped:Connect(function(dt)
 		if onPad then
 			meterT = 0
 			bounce(meter)
-			lockOnPad(true)
-		elseif not busy then
-			camera.CameraType = Enum.CameraType.Custom
 		end
 	end
 	if onPad then
@@ -1073,10 +1106,6 @@ RunService.RenderStepped:Connect(function(dt)
 		meterPct.Text = "+" .. Util.Format(gain)
 		meterPct.TextColor3 = rating.Color
 		meterHint.Rotation = math.sin(meterT * 6) * 3
-		-- close over-the-shoulder camera looking down the canyon, like the original
-		camera.CameraType = Enum.CameraType.Scriptable
-		local want = CFrame.lookAt(hrp.Position + Vector3.new(2.4, 1.8, 6.5), hrp.Position + Vector3.new(0, 1.2, -14))
-		camera.CFrame = camera.CFrame:Lerp(want, math.min(1, dt * 8))
 	end
 end)
 
@@ -1535,31 +1564,14 @@ local function runThrow(r)
 	camera.FieldOfView = 70
 	hud.Visible = true
 	lockOnPad(false)
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	local petTool = player:FindFirstChildOfClass("Backpack") and player.Backpack:FindFirstChildOfClass("Tool")
+	if hum and petTool and Data and Data.HeldId then
+		hum:EquipTool(petTool) -- back in your hand after the throw
+	end
 	task.wait(Config.ThrowCooldown)
 	busy = false
 end
-
-UIS.InputBegan:Connect(function(input, processed)
-	if processed or not onPad or busy then
-		return
-	end
-	local t = input.UserInputType
-	if t == Enum.UserInputType.MouseButton1 or t == Enum.UserInputType.Touch or input.KeyCode == Enum.KeyCode.Space or input.KeyCode == Enum.KeyCode.ButtonA then
-		busy = true
-		meter.Visible = false
-		onPad = false
-		local sent = throwCount
-		Remotes.Throw:FireServer(meterValue)
-		-- failsafe if the server refused the throw: no result arrived, so hand the camera back
-		task.delay(3, function()
-			if busy and throwCount == sent then
-				busy = false
-				camera.CameraType = Enum.CameraType.Custom
-				lockOnPad(false)
-			end
-		end)
-	end
-end)
 
 Remotes.ThrowFX.OnClientEvent:Connect(function(thrower: Player)
 	if thrower ~= player and thrower.Character then
@@ -1584,8 +1596,8 @@ end)
 
 -- ===================== THROW PAD + PLOT PET IDLE =====================
 do
-	local bb = make("BillboardGui", { Size = UDim2.fromOffset(240, 60), StudsOffset = Vector3.new(0, 6, 0), LightInfluence = 0, AlwaysOnTop = true, Parent = ThrowPad })
-	local t = label({ Text = "🎯 THROW HERE", Size = UDim2.fromScale(1, 1), TextColor3 = C.Gold, Parent = bb, StrokeSize = 3 })
+	local bb = make("BillboardGui", { Size = UDim2.fromOffset(240, 60), StudsOffset = Vector3.new(0, 6, 0), LightInfluence = 0, AlwaysOnTop = true, Parent = ThrowLine })
+	local t = label({ Text = "🎯 CROSS TO THROW", Size = UDim2.fromScale(1, 1), TextColor3 = C.Gold, Parent = bb, StrokeSize = 3 })
 	task.spawn(function()
 		while true do
 			TweenService:Create(bb, TweenInfo.new(0.8, Enum.EasingStyle.Sine), { StudsOffset = Vector3.new(0, 7, 0) }):Play()

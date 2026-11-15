@@ -104,7 +104,6 @@ Config.OfflineCapHours = 8
 Config.OfflineRate = 0.5
 Config.ThrowCooldown = 1.5 -- seconds after the reveal finishes
 Config.RevealSeconds = 5.5 -- animal walks in, name reveal, result card
-Config.OneInMin = 100 -- pulls rarer than 1 in this get the "1 in X" reveal
 Config.OneInSeconds = 2.4 -- how much longer that reveal runs
 
 function Config.FlightTime(distance: number): number

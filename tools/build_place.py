@@ -324,7 +324,6 @@ base.add(part("TitleTrim", (62, 1, 2.4), (0, 56.4, -68), "FFD23C"))
 spawn = part("SpawnLocation", (12, 1, 12), (0, 0.5, 118), "FFFFFF", cls="SpawnLocation")
 spawn.raw('<bool name="Neutral">true</bool>').raw('<int name="Duration">0</int>')
 mapm.add(spawn)
-mapm.add(part("ThrowPad", (20, 0.6, 10), (0, 0.3, -60), "FF8A1C", kind="neon"))
 mapm.add(part("ThrowLine", (68, 0.3, 1.5), (0, 0.15, -66.5), "FFFFFF", kind="neon", collide=False))
 
 sell = mapm.add(Item("Model", "SellStand"))
