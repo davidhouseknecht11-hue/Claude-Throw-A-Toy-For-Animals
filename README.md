@@ -11,7 +11,8 @@ New sounds can take a few minutes to pass Roblox moderation before they play.
 1. **Saving**: Game Settings > Security > Enable Studio Access to API Services (to test saving in Studio).
 2. **Robux shop** (the Shop button; the Noob's stall is the toy shop): create these on the Creator Dashboard and paste
    each id into `Config.Shop` (`Id = 0` buttons say "Not for sale yet"). Keep the Robux numbers equal to the dashboard prices.
-   - Developer products: Enchanted Egg x1/x3/x10, Rainbow Egg x1/x3, Cash packs 1-4 (pay 10 min / 1 h / 6 h / 24 h of income).
+   - Developer products: Enchanted Egg x1/x3/x10 (6 egg-only Exclusive pets, see `Config.Exclusives`), Rainbow Egg x1/x3,
+     Cash packs 1-4 (the bigger of 10 min / 1 h / 6 h / 24 h of income or 25% / 1x / 3x / 10x the cash you hold).
    - Game passes: x2 Cash, x2 Training Power.
    - Optional: `LuckProductId` (100x luck, 15 min) shows a HUD button once set.
 

@@ -8,6 +8,17 @@ Config.Rarities = {
 	{ Name = "Epic", Color = Color3.fromRGB(180, 95, 255), Weight = 4, Mult = 15 },
 	{ Name = "Legendary", Color = Color3.fromRGB(255, 190, 40), Weight = 0.9, Mult = 40 },
 	{ Name = "Mythic", Color = Color3.fromRGB(255, 60, 125), Weight = 0.1, Mult = 120 },
+	{ Name = "Exclusive", Color = Color3.fromRGB(0, 255, 210), Weight = 0, Mult = 300 }, -- Enchanted Egg only, never thrown
+}
+
+-- Enchanted Egg exclusives: earn like a Fantasy-zone pet x Exclusive rarity x Boost (a Void Kitsune out-earns ~100 Mythics).
+Config.Exclusives = {
+	{ Name = "Crystal Bunny", Chance = 35, Boost = 1 },
+	{ Name = "Galaxy Cat", Chance = 30, Boost = 1.5 },
+	{ Name = "Angel Pup", Chance = 20, Boost = 2.5 },
+	{ Name = "Lava Tiger", Chance = 10, Boost = 4 },
+	{ Name = "Rainbow Pegacorn", Chance = 4, Boost = 8 },
+	{ Name = "Void Kitsune", Chance = 1, Boost = 20 },
 }
 Config.RarityIndex = {} :: { [string]: number }
 for i, r in Config.Rarities do
@@ -108,19 +119,19 @@ Config.LuckBoostSeconds = 15 * 60
 Config.Shop = {
 	Eggs = {
 		{ Name = "ENCHANTED EGG", Badge = "NEW!", Blurb = "A little magic. A legendary new friend.", Icon = "Icon Egg Enchanted",
-			Pool = { { "Tiger", 30 }, { "Lion", 30 }, { "Polar Bear", 24 }, { "Arctic Wolf", 10 }, { "Phoenix", 5 }, { "Dragon", 1 } },
+			Pool = {}, -- filled from Config.Exclusives below
 			Buy = { { Key = "Enchanted1", Count = 1, Robux = 72, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 180, Id = 0 },
 				{ Key = "Enchanted10", Count = 10, Robux = 585, Id = 0 } } },
 		{ Name = "RAINBOW EGG", Badge = "LIMITED", Blurb = "Hatch a random Rainbow Huge animal!", Icon = "Icon Egg Rainbow",
 			Mutation = "Rainbow", Size = "Huge", -- pool: every animal, weighted by rarity
 			Buy = { { Key = "Rainbow1", Count = 1, Robux = 90, Id = 0 }, { Key = "Rainbow3", Count = 3, Robux = 225, Id = 0 } } },
 	},
-	-- a pack pays this many seconds of your current income (at least MinIncome/s), so it stays worth it at every stage
+	-- packs grow as you get richer: the bigger of Seconds of income or Share of the cash you hold (see CashPackValue)
 	CashPacks = {
-		{ Key = "Cash1", Seconds = 600, Robux = 22, Id = 0 },
-		{ Key = "Cash2", Seconds = 3600, Robux = 54, Id = 0, Tag = "GOOD VALUE" },
-		{ Key = "Cash3", Seconds = 6 * 3600, Robux = 72, Id = 0, Tag = "GREAT VALUE" },
-		{ Key = "Cash4", Seconds = 24 * 3600, Robux = 180, Id = 0, Tag = "BEST VALUE" },
+		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 22, Id = 0 },
+		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 54, Id = 0, Tag = "GOOD VALUE" },
+		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 72, Id = 0, Tag = "GREAT VALUE" },
+		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 180, Id = 0, Tag = "BEST VALUE" },
 	},
 	MinIncome = 20,
 	Passes = { -- game passes
@@ -128,6 +139,16 @@ Config.Shop = {
 		{ Key = "TrainPass", Name = "x2 TRAINING POWER", Text = "Double power on every pull-up!", Icon = "Icon Muscle", Robux = 135, Id = 0 },
 	},
 }
+for _, e in Config.Exclusives do
+	table.insert(Config.Shop.Eggs[1].Pool, { e.Name, e.Chance })
+end
+
+function Config.CashPackValue(pack, income: number, cash: number): number
+	return math.floor(math.max(math.max(income, Config.Shop.MinIncome) * pack.Seconds, cash * pack.Share))
+end
+assert(Config.CashPackValue(Config.Shop.CashPacks[4], 0, 1e6) == 10e6 and Config.CashPackValue(Config.Shop.CashPacks[1], 0, 0) == 12000,
+	"CashPackValue self-check failed")
+
 Config.ShopItem = {} :: { [string]: any } -- Key -> entry (egg buys also get .Egg)
 for _, egg in Config.Shop.Eggs do
 	for _, b in egg.Buy do
@@ -184,11 +205,14 @@ function Config.BaseIncome(zoneIndex: number, rarity: string): number
 end
 
 -- name -> {Zone = index, Rarity = name}
-Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string } }
+Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string, Boost: number? } }
 for zi, z in Config.Zones do
 	for _, a in z.Animals do
 		Config.AnimalInfo[a[1]] = { Zone = zi, Rarity = a[2] }
 	end
+end
+for _, e in Config.Exclusives do
+	Config.AnimalInfo[e.Name] = { Zone = #Config.Zones, Rarity = "Exclusive", Boost = e.Boost }
 end
 Config.ToyInfo = {} :: { [string]: any }
 for i, t in Config.Toys do

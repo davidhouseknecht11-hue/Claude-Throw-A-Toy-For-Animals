@@ -74,7 +74,7 @@ local function animalIncome(a: Animal): number
 	end
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 	local mut = Config.Find(Config.Mutations, a.Mutation) or Config.Mutations[1]
-	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult
+	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult * (info.Boost or 1)
 end
 
 local function indexBonus(d): number
@@ -962,7 +962,7 @@ local function grantProduct(player: Player, prof, item)
 	if item.Egg then
 		hatch(player, prof, item.Egg, item.Count)
 	else
-		local gain = math.max(totalIncome(prof), Config.Shop.MinIncome) * item.Seconds
+		local gain = Config.CashPackValue(item, totalIncome(prof), prof.Data.Cash)
 		prof.Data.Cash += gain
 		notify(player, "+$" .. Util.Format(gain) .. " cash!", "good")
 	end

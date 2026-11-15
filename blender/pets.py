@@ -515,3 +515,82 @@ for row, n in enumerate((3, 2, 1)):
         a.b((1.2, 0.6, 0.45), (x, 0, z), "4CC94C").b((0.24, 0.62, 0.47), (x, 0, z), "FFD23C")
 for x, z in ((1.85, -0.1), (1.6, 0.1)):
     a.b((0.45, 0.45, 0.12), (x, 0.2, z), "FFC21C")
+
+
+# =============================== EXCLUSIVE (Enchanted Egg only) ===============================
+# Each is a reskin of a base pet (same rig/bones) plus its own extras. cmap: base hex -> hex, (hex, kind), or a list
+# cycled per brick (rainbow stripes). Neon eye highlights are left alone.
+def variant(base, name, cmap):
+    src = next(m for m in MODELS_ALL() if m.name == base)
+    a = Brick(name, "Exclusive")
+    seen = {}
+    for bx in src.boxes:
+        c, kind = bx["color"], bx["kind"]
+        new = cmap.get(c) if kind != "neon" else None
+        if isinstance(new, list):
+            seen[c] = seen.get(c, -1) + 1
+            new = new[seen[c] % len(new)]
+        if isinstance(new, tuple):
+            new, kind = new
+        a.b(bx["size"], bx["pos"], new or c, bx["bone"], bx["rot"], kind)
+    a.pivots.update(src.pivots)
+    return a
+
+
+def MODELS_ALL():
+    import brick
+    return brick.MODELS
+
+
+def halo(a, y, z, r=0.32):
+    a.b((2 * r + 0.1, 0.1, 0.07), (0, y + r, z), "FFD84A", "head", kind="neon").b((2 * r + 0.1, 0.1, 0.07), (0, y - r, z), "FFD84A", "head", kind="neon")
+    a.m((0.1, 2 * r, 0.07), (r, y, z), "FFD84A", "head", kind="neon")
+
+
+def wings(a, x, y, z, color, tip, length=1.0):
+    a.m((0.12, length, 0.7), (x + 0.1, y - 0.1, z + 0.3), color, "wingR", rot=(0, 35, 0))
+    a.m((0.1, length * 0.8, 0.45), (x + 0.4, y - 0.25, z + 0.75), tip, "wingR", rot=(0, 45, 0))
+    a.pivot("wingR", (x - 0.1, y, z)).pivot("wingL", (-(x - 0.1), y, z))
+
+
+# 35% Crystal Bunny: ice-blue bunny growing glowing crystals
+a = variant("Bunny", "Crystal Bunny", {"F4F1EE": "A9ECFF", "FFFFFF": "E2FAFF", "ECE6E2": "7FD6F5", "F7B6C8": ("5CE6FF", "neon"), "F28BA5": "FF6AD5"})
+for x, y, z, h, t in ((0.3, -0.3, 0.8, 0.7, 25), (-0.3, -0.25, 0.8, 0.6, -25), (0.0, -0.5, 0.8, 0.55, 0)):
+    a.b((0.26, 0.26, h), (x, y, z + h / 2), "3FD8FF", kind="neon", rot=(0, t, 0))
+a.b((0.14, 0.14, 0.34), (0, 0.4, 2.05), "6FF0FF", "head", kind="glass")
+
+# 30% Galaxy Cat: night-sky fur with twinkling stars
+a = variant("Cat", "Galaxy Cat", {"E8A055": "2B2066", "F8EEDD": "6A4BD8", "C27532": "160F3E", "2E6B1E": ("FF6AD5", "neon"),
+                                  "F7B2C2": "C85CFF", "F48AA0": "FF6AD5", "FFFFFF": "8F7BFF"})
+for x, y, z in ((0.46, -0.3, 0.8), (0.46, 0.1, 1.1), (0.46, -0.5, 1.2), (-0.46, -0.2, 0.9), (-0.46, 0.2, 1.2), (-0.46, -0.55, 1.05)):
+    a.b((0.04, 0.09, 0.09), (x, y, z), "FFFFFF", kind="neon")
+a.b((0.12, 0.12, 0.12), (0, -1.3, 0.72), "FFE45C", "tail", kind="neon")
+
+# 20% Angel Pup: white-gold pup with wings and a halo
+a = variant("Dog", "Angel Pup", {"D8A266": "FBF8F0", "F3E1C4": "FFFFFF", "C08548": "FFE6A0", "8A5A32": "F2CF6E", "D6383A": "FFC21C", "FFC93C": ("5CE6FF", "neon")})
+wings(a, 0.6, 0.0, 1.3, "FFFFFF", "FFE6A0", 1.3)
+halo(a, 0.78, 2.78)
+
+# 10% Lava Tiger: obsidian body, molten neon stripes, burning tail
+a = variant("Tiger", "Lava Tiger", {"F28A24": "2A2A31", "FFF6EA": "45454F", "1C1414": ("FF5A1C", "neon"), "C8D838": ("FFD23C", "neon"), "F48AA0": "FF5A1C"})
+a.b((0.26, 0.26, 0.3), (0, -1.45, 2.22), "FF7A1C", "tail", kind="neon").b((0.14, 0.14, 0.22), (0, -1.45, 2.45), "FFD23C", "tail", kind="neon")
+
+# 4% Rainbow Pegacorn: rainbow-striped winged unicorn with a golden horn
+RAIN = ["FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "7A5CFF", "C85CFF"]
+a = variant("Zebra", "Rainbow Pegacorn", {"222228": RAIN, "3A3A42": "FFB8E0"})
+a.b((0.17, 0.17, 0.3), (0, 1.58, 2.72), "FFC21C", "head", rot=(25, 0, 0)).b((0.11, 0.11, 0.28), (0, 1.68, 2.95), "FFE45C", "head", rot=(25, 0, 0), kind="neon")
+wings(a, 0.52, 0.2, 1.8, "FFFFFF", "FFB8E0", 1.2)
+
+# 1% Void Kitsune: shadow fox with five flaming spirit tails
+a = variant("Fox", "Void Kitsune", {"F07A26": "1E1236", "FFF6EA": "B65CFF", "2A1D18": "0C0816", "1C1414": "FF3BD4", "141418": ("FF3BD4", "neon")})
+import math as _m
+tail = [b for b in a.boxes if b["bone"] == "tail"]
+px, py, pz = a.pivots["tail"]
+for ang in (-55, -28, 28, 55):
+    c, s = _m.cos(_m.radians(ang)), _m.sin(_m.radians(ang))
+    for bx in tail:
+        x, y, z = bx["pos"][0] - px, bx["pos"][1] - py, bx["pos"][2]
+        rx = bx["rot"] or (0, 0, 0)
+        a.b(bx["size"], (px + c * x - s * y, py + s * x + c * y, z), bx["color"], "tail", (rx[0], rx[1], rx[2] + ang), bx["kind"])
+for bx in [b for b in a.boxes if b["bone"] == "tail" and b["color"] == "B65CFF"]:
+    bx["kind"] = "neon"  # glowing tail tips

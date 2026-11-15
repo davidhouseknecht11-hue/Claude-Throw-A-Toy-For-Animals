@@ -528,7 +528,7 @@ for i, egg in Config.Shop.Eggs do
 		end)
 		local rarest = egg.Pool[#egg.Pool]
 		local chips = {
-			{ #egg.Pool .. " UNIQUE PETS", "One magical hatch" },
+			{ #egg.Pool .. " EXCLUSIVE PETS", "Only in this egg" },
 			{ string.format("%g%% %s", rarest[2] / total * 100, Config.AnimalInfo[rarest[1]].Rarity:upper()), "Chase the rarest" },
 			{ "LIMITED DROP", "Get it before it's gone" },
 		}
@@ -577,12 +577,17 @@ do
 	end
 end
 local function refreshCashPacks()
-	local income = math.max(player:GetAttribute("Income") or 0, Config.Shop.MinIncome)
+	local income, cash = player:GetAttribute("Income") or 0, player:GetAttribute("Cash") or 0
 	for pack, l in cashAmounts do
-		l.Text = "+$" .. Util.Format(income * pack.Seconds)
+		l.Text = "+$" .. Util.Format(Config.CashPackValue(pack, income, cash))
 	end
 end
 player:GetAttributeChangedSignal("Income"):Connect(refreshCashPacks)
+player:GetAttributeChangedSignal("Cash"):Connect(function()
+	if robuxFrame.Visible then
+		refreshCashPacks()
+	end
+end)
 
 -- GAMEPASSES (Figma: title row + two 556 x 230 cards)
 local passButtons = {}
