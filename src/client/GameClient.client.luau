@@ -429,7 +429,20 @@ local function robuxButton(parent: Instance, robux: number, key: string, x, y, w
 	})
 	make("ImageLabel", { Image = ROBUX, Size = UDim2.fromScale(0.85, 0.85), SizeConstraint = Enum.SizeConstraint.RelativeYY,
 		BackgroundTransparency = 1, LayoutOrder = 1, Parent = row })
-	label({ Text = tostring(robux), Size = UDim2.fromScale(0.3, 1.25), LayoutOrder = 2, Parent = row, StrokeSize = 3 })
+	local priceLabel = label({ Text = tostring(robux), Size = UDim2.fromScale(0.3, 1.25), LayoutOrder = 2, Parent = row, StrokeSize = 3 })
+	local item = Config.ShopItem[key]
+	if item and item.Id ~= 0 then
+		task.spawn(function() -- managed pricing can change what Roblox charges: show the live price
+			local mps = game:GetService("MarketplaceService")
+			local ok, info = pcall(mps.GetProductInfo, mps, item.Id, item.Text and Enum.InfoType.GamePass or Enum.InfoType.Product)
+			if ok and info and info.PriceInRobux then
+				item.Robux = info.PriceInRobux
+				if priceLabel.Text ~= "OWNED" then
+					priceLabel.Text = tostring(info.PriceInRobux)
+				end
+			end
+		end)
+	end
 	return b
 end
 local function card(parent: Instance, c1: Color3, c2: Color3, x, y, w, h, pw, ph): Frame

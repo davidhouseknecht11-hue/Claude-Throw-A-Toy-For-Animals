@@ -127,25 +127,24 @@ Config.LuckBoostSeconds = 15 * 60
 
 -- Robux shop (layout from the Figma "Roblox shop" frame). Id = developer product / game pass id from the Creator
 -- Dashboard; 0 = button says "not for sale yet". Robux is display only: keep it equal to the dashboard price.
--- Pass = true: the item is a Game Pass that grants its reward once when bought (a pass can only be bought once per
--- player). Make it a Developer Product instead to allow repeat buys: paste the product id and remove Pass.
+-- Eggs and cash packs are Developer Products (repeat buys). Pass = true marks one sold as a one-time Game Pass instead.
 Config.Shop = {
 	Eggs = {
 		{ Name = "ENCHANTED EGG", Badge = "NEW!", Blurb = "A little magic. A legendary new friend.", Icon = "Icon Egg Enchanted",
 			Pool = {}, -- filled from Config.Exclusives below
-			Buy = { { Key = "Enchanted1", Count = 1, Robux = 35, Id = 0 }, { Key = "Enchanted3", Count = 3, Robux = 90, Id = 2087890754, Pass = true },
-				{ Key = "Enchanted10", Count = 10, Robux = 299, Id = 2088634776, Pass = true } } },
+			Buy = { { Key = "Enchanted1", Count = 1, Robux = 35, Id = 3732056166 }, { Key = "Enchanted3", Count = 3, Robux = 90, Id = 3732056226 },
+				{ Key = "Enchanted10", Count = 10, Robux = 299, Id = 3732056303 } } },
 		{ Name = "RAINBOW EGG", Badge = "SECRET", Blurb = "GUARANTEED Rainbow Huge SECRET!", Icon = "Icon Egg Rainbow",
 			Mutation = "Rainbow", Size = "Huge", Pool = {}, -- pool: every Secret pet, equal chance (filled below)
-			Buy = { { Key = "Rainbow1", Count = 1, Robux = 45, Id = 2088304776, Pass = true },
-				{ Key = "Rainbow3", Count = 3, Robux = 129, Id = 2088232697, Pass = true } } },
+			Buy = { { Key = "Rainbow1", Count = 1, Robux = 45, Id = 3732055877 },
+				{ Key = "Rainbow3", Count = 3, Robux = 129, Id = 3732056024 } } },
 	},
 	-- packs grow as you get richer: the bigger of Seconds of income or Share of the cash you hold (see CashPackValue)
 	CashPacks = {
-		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 11, Id = 2088400723, Pass = true },
-		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 29, Id = 2089612769, Pass = true, Tag = "GOOD VALUE" },
-		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 39, Id = 2088856705, Pass = true, Tag = "GREAT VALUE" },
-		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 59, Id = 2088118759, Pass = true, Tag = "BEST VALUE" },
+		{ Key = "Cash1", Seconds = 600, Share = 0.25, Robux = 11, Id = 3732056492 },
+		{ Key = "Cash2", Seconds = 3600, Share = 1, Robux = 29, Id = 3732056564, Tag = "GOOD VALUE" },
+		{ Key = "Cash3", Seconds = 6 * 3600, Share = 3, Robux = 39, Id = 3732056659, Tag = "GREAT VALUE" },
+		{ Key = "Cash4", Seconds = 24 * 3600, Share = 10, Robux = 59, Id = 3732056740, Tag = "BEST VALUE" },
 	},
 	MinIncome = 20,
 	Passes = { -- game passes
