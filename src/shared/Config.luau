@@ -9,12 +9,14 @@ Config.Rarities = {
 	{ Name = "Legendary", Color = Color3.fromRGB(255, 190, 40), Weight = 0.9, Mult = 40 },
 	{ Name = "Mythic", Color = Color3.fromRGB(255, 60, 125), Weight = 0.1, Mult = 120 },
 	{ Name = "Exclusive", Color = Color3.fromRGB(0, 255, 210), Weight = 0, Mult = 300 }, -- Enchanted Egg only, never thrown
+	-- ultra-rare throws, each with its own Blender cinematic on the catch; never needed for zone completion
+	{ Name = "Secret", Color = Color3.fromRGB(215, 20, 55), Weight = 0.002, Mult = 500 },
 }
 
 -- Enchanted Egg exclusives: earn like a Fantasy-zone pet x Exclusive rarity x Boost (a Void Kitsune out-earns ~100 Mythics).
 Config.Exclusives = {
 	{ Name = "Crystal Bunny", Chance = 35, Boost = 1 },
-	{ Name = "Galaxy Cat", Chance = 30, Boost = 1.5 },
+	{ Name = "Nebula Fox", Chance = 30, Boost = 1.5 },
 	{ Name = "Angel Pup", Chance = 20, Boost = 2.5 },
 	{ Name = "Lava Tiger", Chance = 10, Boost = 4 },
 	{ Name = "Rainbow Pegacorn", Chance = 4, Boost = 8 },
@@ -29,22 +31,28 @@ end
 Config.Zones = {
 	{ Name = "Backyard", Icon = "🏡", Floor = Color3.fromRGB(98, 206, 72), Wall = Color3.fromRGB(150, 98, 60), Top = Color3.fromRGB(120, 220, 80),
 		Sky = Color3.fromRGB(150, 205, 255),
-		Animals = { { "Dog", "Common" }, { "Cat", "Common" }, { "Bunny", "Uncommon" }, { "Hamster", "Rare" } } },
+		Animals = { { "Dog", "Common" }, { "Cat", "Common" }, { "Bunny", "Uncommon" }, { "Hamster", "Rare" },
+			{ "Gummy Bear", "Secret" }, { "Cursed Teddy", "Secret" }, { "Cyber Dog", "Secret" } } },
 	{ Name = "Farm", Icon = "🌾", Floor = Color3.fromRGB(224, 196, 110), Wall = Color3.fromRGB(176, 64, 52), Top = Color3.fromRGB(240, 210, 90),
 		Sky = Color3.fromRGB(255, 215, 160),
-		Animals = { { "Pig", "Common" }, { "Duck", "Common" }, { "Cow", "Uncommon" }, { "Sheep", "Rare" } } },
+		Animals = { { "Pig", "Common" }, { "Duck", "Common" }, { "Cow", "Uncommon" }, { "Sheep", "Rare" },
+			{ "Nuclear Frog", "Secret" }, { "Alien Cat", "Secret" } } },
 	{ Name = "Jungle", Icon = "🌴", Floor = Color3.fromRGB(46, 150, 70), Wall = Color3.fromRGB(70, 92, 60), Top = Color3.fromRGB(40, 175, 80),
 		Sky = Color3.fromRGB(150, 230, 170),
-		Animals = { { "Monkey", "Common" }, { "Fox", "Uncommon" }, { "Gorilla", "Rare" }, { "Tiger", "Epic" } } },
+		Animals = { { "Monkey", "Common" }, { "Fox", "Uncommon" }, { "Gorilla", "Rare" }, { "Tiger", "Epic" },
+			{ "Lava Gorilla", "Secret" }, { "Shadow Panther", "Secret" } } },
 	{ Name = "Safari", Icon = "🦁", Floor = Color3.fromRGB(232, 190, 110), Wall = Color3.fromRGB(196, 120, 64), Top = Color3.fromRGB(205, 180, 80),
 		Sky = Color3.fromRGB(255, 190, 120),
-		Animals = { { "Zebra", "Common" }, { "Giraffe", "Uncommon" }, { "Elephant", "Rare" }, { "Lion", "Epic" } } },
+		Animals = { { "Zebra", "Common" }, { "Giraffe", "Uncommon" }, { "Elephant", "Rare" }, { "Lion", "Epic" },
+			{ "Diamond Elephant", "Secret" }, { "Golden Phoenix", "Secret" } } },
 	{ Name = "Arctic", Icon = "❄️", Floor = Color3.fromRGB(236, 246, 255), Wall = Color3.fromRGB(140, 196, 240), Top = Color3.fromRGB(255, 255, 255),
 		Sky = Color3.fromRGB(190, 230, 255),
-		Animals = { { "Penguin", "Rare" }, { "Polar Bear", "Epic" }, { "Arctic Wolf", "Legendary" } } },
+		Animals = { { "Penguin", "Rare" }, { "Polar Bear", "Epic" }, { "Arctic Wolf", "Legendary" },
+			{ "Ice Dragon", "Secret" }, { "Emperor Penguin", "Secret" }, { "Crystal Wolf", "Secret" } } },
 	{ Name = "Fantasy", Icon = "🐉", Floor = Color3.fromRGB(120, 80, 210), Wall = Color3.fromRGB(60, 40, 120), Top = Color3.fromRGB(255, 120, 230),
 		Sky = Color3.fromRGB(220, 150, 255),
-		Animals = { { "Phoenix", "Legendary" }, { "Dragon", "Mythic" }, { "Crystal Wolf", "Mythic" } } },
+		Animals = { { "Phoenix", "Legendary" }, { "Dragon", "Mythic" }, { "Griffin", "Mythic" },
+			{ "Rainbow Dragon", "Secret" }, { "Galaxy Whale", "Secret" }, { "Galaxy Cat", "Secret" } } },
 }
 
 -- Map layout (studs). The generator in tools/build_place.py uses the same numbers.
@@ -105,6 +113,7 @@ Config.OfflineRate = 0.5
 Config.ThrowCooldown = 1.5 -- seconds after the reveal finishes
 Config.RevealSeconds = 5.5 -- animal walks in, name reveal, result card
 Config.OneInSeconds = 2.4 -- how much longer that reveal runs
+Config.SecretSeconds = 3.2 -- a Secret's Blender cinematic runs this much longer than a normal reveal (replaces OneInSeconds)
 
 function Config.FlightTime(distance: number): number
 	return 1.4 + distance / 230

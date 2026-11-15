@@ -38,7 +38,7 @@ local function buildRig(model: Model): Rig?
 	local parts = {}
 	for _, p in model:GetChildren() do
 		if p:IsA("BasePart") and p ~= root then
-			table.insert(parts, { p, p.Name, root.CFrame:ToObjectSpace(p.CFrame) })
+			table.insert(parts, { p, p.Name, root.CFrame:ToObjectSpace(p.CFrame), p.Size })
 		end
 	end
 	local pivots = {}
@@ -1453,7 +1453,7 @@ end
 
 -- Overhead "1 in X" shot: dark cut, camera high above the catch sinking toward it, counter pill at the top climbing
 -- through the luck tiers while the name reveals, clovers raining, then a slam. Returns the pill (kept up with the card).
-local function oneInReveal(odds: number, color: Color3, center: Vector3, duration: number, onFrame: () -> ()): Frame
+local function oneInReveal(odds: number, color: Color3, center: Vector3, duration: number, onFrame: (number) -> (), ownCamera: boolean?): Frame
 	screenFlash(Color3.new(0, 0, 0), 0.85)
 	local pill = make("Frame", { Size = UDim2.fromOffset(420, 84), Position = UDim2.new(0.5, 0, 0, 92), AnchorPoint = Vector2.new(0.5, 0.5),
 		BackgroundColor3 = Color3.fromRGB(20, 20, 30), BackgroundTransparency = 0.45, ZIndex = 20, Parent = overlay },
@@ -1500,9 +1500,11 @@ local function oneInReveal(odds: number, color: Color3, center: Vector3, duratio
 			lastClover = os.clock()
 			cloverRain(center, 40)
 		end
-		local ck = 1 - (1 - el / duration) ^ 2
-		camera.CFrame = CFrame.lookAt(camFrom:Lerp(camTo, ck), center) * CFrame.Angles(0, 0, math.rad(ck * 12))
-		onFrame()
+		if not ownCamera then -- a Secret's cinematic flies its own camera
+			local ck = 1 - (1 - el / duration) ^ 2
+			camera.CFrame = CFrame.lookAt(camFrom:Lerp(camTo, ck), center) * CFrame.Angles(0, 0, math.rad(ck * 12))
+		end
+		onFrame(el)
 		RunService.RenderStepped:Wait()
 	end
 	task.delay(0.4, function()
@@ -1511,6 +1513,143 @@ local function oneInReveal(odds: number, color: Color3, center: Vector3, duratio
 		title:Destroy()
 	end)
 	return pill
+end
+
+-- ===================== SECRET CINEMATICS =====================
+-- Each Secret pet has a catch cinematic keyframed in Blender (blender/cinematics.py) and exported as per-frame tracks:
+-- Pet (CFrame + non-uniform scale + fade), Bones (rotation about the pivot), Props (FX models), Camera, Events.
+-- Everything is relative to the pet's rest spot; positions scale with the pet's size.
+local CinematicData = Shared:WaitForChild("Cinematics")
+local PET_STRIDE, PROP_STRIDE, CAM_STRIDE, BONE_STRIDE = 16, 14, 12, 9
+
+local function cfAt(arr: { number }, stride: number, i: number, a: number, sizeScale: number): CFrame
+	local function at(k)
+		local o = k * stride
+		return CFrame.new(arr[o + 1] * sizeScale, arr[o + 2] * sizeScale, arr[o + 3] * sizeScale,
+			arr[o + 4], arr[o + 5], arr[o + 6], arr[o + 7], arr[o + 8], arr[o + 9], arr[o + 10], arr[o + 11], arr[o + 12])
+	end
+	return at(i):Lerp(at(i + 1), a)
+end
+local function numAt(arr: { number }, stride: number, offset: number, i: number, a: number): number
+	local v0, v1 = arr[i * stride + offset], arr[(i + 1) * stride + offset]
+	return v0 + (v1 - v0) * a
+end
+local function rotAt(arr: { number }, i: number, a: number): CFrame
+	local function at(k)
+		local o = k * BONE_STRIDE
+		return CFrame.new(0, 0, 0, arr[o + 1], arr[o + 2], arr[o + 3], arr[o + 4], arr[o + 5], arr[o + 6], arr[o + 7], arr[o + 8], arr[o + 9])
+	end
+	return at(i):Lerp(at(i + 1), a)
+end
+local function setAlpha(m: Instance, alpha: number)
+	for _, p in m:GetDescendants() do
+		if p:IsA("BasePart") then
+			p.LocalTransparencyModifier = alpha
+		end
+	end
+end
+
+-- Pose a rig with the cinematic's bone rotations, a non-uniform squash/stretch and a fade.
+local function poseCine(rig: Rig, rootCF: CFrame, scale: Vector3, bones: { [string]: CFrame }, alpha: number)
+	local parts, cfs = {}, {}
+	local uniform = (scale - Vector3.one).Magnitude < 1e-3
+	for _, e in rig.Parts do
+		local p, bone, rel = e[1], e[2], e[3]
+		if not uniform then
+			rel = CFrame.new(rel.Position * scale) * rel.Rotation
+			local sx = (rel.RightVector * scale).Magnitude
+			local sy = (rel.UpVector * scale).Magnitude
+			local sz = (rel.LookVector * scale).Magnitude
+			p.Size = e[4] * Vector3.new(sx, sy, sz)
+		elseif p.Size ~= e[4] then
+			p.Size = e[4]
+		end
+		local r, pv = bones[bone], rig.Pivots[bone]
+		if r and pv then
+			local spv = pv * scale
+			rel = CFrame.new(spv) * r * CFrame.new(-spv) * rel
+		end
+		p.LocalTransparencyModifier = alpha
+		table.insert(parts, p)
+		table.insert(cfs, rootCF * rel)
+	end
+	table.insert(parts, rig.Root)
+	table.insert(cfs, rootCF)
+	workspace:BulkMoveTo(parts, cfs, Enum.BulkMoveMode.FireCFrameChanged)
+end
+
+local EVENT_COLOR = function(hexc: string?): Color3
+	return hexc and Color3.fromHex(hexc) or C.White
+end
+
+-- Returns a per-frame stepper (call with seconds since start; nil when done to clean up) and the cinematic's length.
+local function cinematicPlayer(name: string, rig: Rig, restCF: CFrame, sizeScale: number, shimmer: { BasePart })
+	local mod = CinematicData:FindFirstChild((name:gsub(" ", "")))
+	if not (mod and rig) then
+		return nil
+	end
+	local cine = require(mod)
+	local props = {}
+	for _, p in cine.Props do
+		local m = cloneModel(p.Model, 1)
+		if m then
+			setAlpha(m, 1)
+			table.insert(props, { Model = m, F = p.F, Scale = 1 })
+		end
+	end
+	local frames = #cine.Camera // CAM_STRIDE
+	local nextEvent = 1
+	camera.CameraType = Enum.CameraType.Scriptable
+	local function step(t: number?)
+		if t == nil then -- done: put the pet back to normal and clear the props
+			for _, p in props do
+				p.Model:Destroy()
+			end
+			poseCine(rig, restCF, Vector3.one, {}, 0)
+			return
+		end
+		local x = math.clamp(t * cine.Fps, 0, frames - 1.001)
+		local i = math.floor(x)
+		local a = x - i
+		local petCF = restCF * cfAt(cine.Pet, PET_STRIDE, i, a, sizeScale)
+		local scale = Vector3.new(numAt(cine.Pet, PET_STRIDE, 13, i, a), numAt(cine.Pet, PET_STRIDE, 14, i, a), numAt(cine.Pet, PET_STRIDE, 15, i, a))
+		local bones = {}
+		for bone, arr in cine.Bones do
+			bones[bone] = rotAt(arr, i, a)
+		end
+		poseCine(rig, petCF, scale, bones, math.clamp(numAt(cine.Pet, PET_STRIDE, 16, i, a), 0, 1))
+		Mutations.Shimmer(shimmer, t)
+		for _, p in props do
+			local s = math.max(numAt(p.F, PROP_STRIDE, 13, i, a), 0.01)
+			if math.abs(s - p.Scale) > 1e-3 then
+				p.Model:ScaleTo(s * sizeScale)
+				p.Scale = s
+			end
+			p.Model:PivotTo(restCF * cfAt(p.F, PROP_STRIDE, i, a, sizeScale))
+			setAlpha(p.Model, math.clamp(numAt(p.F, PROP_STRIDE, 14, i, a), 0, 1))
+		end
+		camera.CFrame = restCF * cfAt(cine.Camera, CAM_STRIDE, i, a, sizeScale)
+		while cine.Events[nextEvent] and cine.Events[nextEvent][1] <= t do
+			local e = cine.Events[nextEvent]
+			nextEvent += 1
+			local kind, arg, n = e[2], e[3], tonumber(e[4])
+			local at = petCF.Position + Vector3.new(0, 1.5 * sizeScale, 0)
+			if kind == "burst" then
+				burst(at, EVENT_COLOR(arg), n or 30, 30)
+			elseif kind == "flash" then
+				screenFlash(EVENT_COLOR(arg), n or 0.5)
+			elseif kind == "shake" then
+				shake(tonumber(arg) or 1)
+			elseif kind == "sound" then
+				play(arg)
+			elseif kind == "pillar" then
+				lightPillar(restCF.Position, EVENT_COLOR(arg))
+			elseif kind == "shock" then
+				shockwave(restCF.Position, EVENT_COLOR(arg))
+			end
+		end
+	end
+	return step, cine.Length
 end
 
 local function runThrow(r)
@@ -1655,12 +1794,19 @@ local function runThrow(r)
 	if r.OneIn then
 		-- the name spells out underneath while the counter climbs (both run together, like the original)
 		task.spawn(letterReveal, a.Name, rc)
-		pill = oneInReveal(r.Odds, rc, to, 1.9 + Config.OneInSeconds, function()
+		local cine, length = nil, nil
+		if r.Rarity == "Secret" and rig then
+			cine, length = cinematicPlayer(a.Name, rig, restCF, size.Scale, shimmer)
+		end
+		pill = oneInReveal(r.Odds, rc, to, length or (1.9 + Config.OneInSeconds), cine or function()
 			if rig then
 				pose(rig, restCF * CFrame.new(0, math.abs(math.sin(os.clock() * 7)) * 0.5, 0), os.clock(), false)
 			end
 			Mutations.Shimmer(shimmer, os.clock())
-		end)
+		end, cine ~= nil)
+		if cine then
+			cine(nil)
+		end
 		camPos = camera.CFrame.Position
 	else
 		letterReveal(a.Name, rc)

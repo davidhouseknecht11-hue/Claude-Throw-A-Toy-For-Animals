@@ -89,7 +89,7 @@ local function indexBonus(d): number
 	for _, z in Config.Zones do
 		local all = true
 		for _, a in z.Animals do
-			if not d.Index[a[1]] then
+			if a[2] ~= "Secret" and not d.Index[a[1]] then -- secrets are a bonus, not required
 				all = false
 				break
 			end
@@ -562,7 +562,8 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 		return m.Chance * (m.Name ~= "None" and luckSoft ^ 0.2 or 1)
 	end, rng)
 	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation, at this luck
-	local oneIn = mut.Name ~= "None" -- any mutation gets the "1 in X" reveal
+	local secret = pick[2] == "Secret"
+	local oneIn = mut.Name ~= "None" or secret -- mutations and secrets get the "1 in X" reveal
 	local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size.Name, Mutation = mut.Name, Placed = false }
 	local isNew = not d.Index[pick[1]]
 	local landing = Vector3.new(rng:NextNumber(-14, 14), 0, Config.Map.CorridorStartZ - dist)
@@ -573,7 +574,8 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	})
 	player:SetAttribute("Power", d.Power)
 	ThrowFX:FireAllClients(player)
-	task.delay(Config.FlightTime(dist) + Config.RevealSeconds + (oneIn and Config.OneInSeconds or 0), function()
+	local extra = secret and Config.SecretSeconds or (oneIn and Config.OneInSeconds or 0)
+	task.delay(Config.FlightTime(dist) + Config.RevealSeconds + extra, function()
 		if Profiles[player] ~= prof then
 			return
 		end

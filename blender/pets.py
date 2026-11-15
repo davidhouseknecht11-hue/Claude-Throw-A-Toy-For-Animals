@@ -526,7 +526,7 @@ def variant(base, name, cmap):
     seen = {}
     for bx in src.boxes:
         c, kind = bx["color"], bx["kind"]
-        new = cmap.get(c) if kind != "neon" else None
+        new = cmap.get(c) if kind != "neon" else cmap.get("neon:" + c)  # glow bits change only when asked
         if isinstance(new, list):
             seen[c] = seen.get(c, -1) + 1
             new = new[seen[c] % len(new)]
@@ -615,3 +615,233 @@ for k in range(12):
     a.b((1.1, 0.16, 0.08), (_mm.cos(t) * 2.0, _mm.sin(t) * 2.0, 0), "B47CFF" if k % 2 else "6FD8FF", kind="neon", rot=(0, 0, _mm.degrees(t) + 90))
 for (x, y, z, r, c) in ((2.0, 0.0, 0.0, 0.42, "FF6AD5"), (-1.4, 1.4, 0.0, 0.3, "FFD23C"), (-0.6, -1.9, 0.0, 0.24, "6FF0FF")):
     a.b((r, r * 0.72, r * 0.72), (x, y, z), c).b((r * 0.72, r, r * 0.72), (x, y, z), c).b((r * 0.72, r * 0.72, r), (x, y, z), c)
+
+
+# =============================== SECRET (ultra-rare throws, each with a Blender cinematic) ===============================
+def stars(a, pts, color="FFFFFF", s=0.07, bone="body"):
+    for x, y, z in pts:
+        a.b((s, s, s), (x, y, z), color, bone, kind="neon")
+
+
+# Rainbow Dragon: rainbow-banded dragon with glowing pink spines
+a = variant("Dragon", "Rainbow Dragon", {"7B3FE4": ["FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "9B5CFF"], "4A1FA0": "FFFFFF",
+                                        "C9ADFF": "FFF2FA", "A985FF": "FFC8F0", "neon:5CFF9D": "FF6AD5"})
+a.group = "Secret"
+
+# Shadow Panther: inky purple-black big cat with violet eyes and wisps
+a = variant("Tiger", "Shadow Panther", {"F28A24": "18141F", "FFF6EA": "2A2236", "1C1414": "3A2A55", "C8D838": ("B45CFF", "neon"), "F48AA0": "5A3A7A"})
+a.group = "Secret"
+stars(a, ((0.3, -0.4, 1.78), (-0.25, 0.2, 1.8), (0.1, 0.6, 1.76), (-0.3, -0.8, 1.74)), "B45CFF", 0.12)
+
+# Golden Phoenix: molten-gold phoenix with a white-hot glow
+a = variant("Phoenix", "Golden Phoenix", {"E8341C": "FFC21C", "FF6A1C": "FFE36A", "FFE36A": "FFF4C2", "neon:FF6A1C": "FFFFFF", "neon:FFC21C": "FFE45C"})
+a.group = "Secret"
+
+# Lava Gorilla: charcoal rock gorilla with glowing lava cracks
+a = variant("Gorilla", "Lava Gorilla", {"34343C": "2A2A30", "28282E": "1C1C22", "6A6A78": "3D3D45", "8E8E9A": ("FF5A1C", "neon")})
+a.group = "Secret"
+for x, z, w in ((0.3, 1.9, 0.5), (-0.35, 1.5, 0.4), (0.05, 1.2, 0.6)):
+    a.b((w, 0.06, 0.08), (x, 0.52, z), "FF7A1C", kind="neon", rot=(0, 25, 0))
+a.m((0.08, 0.48, 0.5), (1.26, 0.22, 1.3), "FF5A1C", "armR", kind="neon")
+
+# Alien Cat: lime cat with huge black eyes and glowing antennae
+a = variant("Cat", "Alien Cat", {"E8A055": "7CFF6A", "C27532": "45C83A", "F8EEDD": "D8FFD0", "2E6B1E": "101010", "F7B2C2": "B8FF9A",
+                                 "F48AA0": "45C83A", "FFFFFF": "D8FFD0"})
+a.group = "Secret"
+a.m((0.06, 0.06, 0.45), (0.15, 0.4, 2.25), "45C83A", "head", rot=(0, -15, 0))
+a.m((0.16, 0.16, 0.16), (0.21, 0.4, 2.5), "B8FF4A", "head", kind="neon")
+
+# Diamond Elephant: crystal-clear elephant with glowing trim
+a = variant("Elephant", "Diamond Elephant", {"9AA4B2": ("8FF0FF", "glass"), "8E98A6": ("6FD8FF", "glass"), "E6E0D4": "FFFFFF",
+                                             "D9473B": ("5CE6FF", "neon"), "FFC93C": "FFFFFF", "F2B0BE": "C8F6FF"})
+a.group = "Secret"
+
+# Gummy Bear: translucent red candy bear
+a = variant("Polar Bear", "Gummy Bear", {"F4F8FB": ("FF3B5C", "glass"), "DCE6EE": ("FF6A80", "glass"), "1C1C22": "B0102A", "3E7BFA": "FF9AB0"})
+a.group = "Secret"
+
+# Ice Dragon: frost-blue dragon with icy wings and white glow
+a = variant("Dragon", "Ice Dragon", {"7B3FE4": "9FE8FF", "4A1FA0": "5CB8E8", "C9ADFF": "E8FAFF", "A985FF": ("BFF2FF", "glass"),
+                                     "neon:5CFF9D": "6FF0FF", "neon:FFE14A": "FFFFFF"})
+a.group = "Secret"
+
+# Cyber Dog: chrome robo-pup with neon visor eyes
+a = variant("Dog", "Cyber Dog", {"D8A266": "9AA4B2", "F3E1C4": "C8D0DC", "C08548": "5A6070", "8A5A32": "3A3F4A", "D6383A": ("FF2A6A", "neon"),
+                                 "neon:FFC93C": "5CE6FF", "141418": ("5CE6FF", "neon"), "F07090": "5A6070", "2B2220": "3A3F4A"})
+a.group = "Secret"
+a.b((0.9, 0.08, 0.12), (0, 1.12, 2.12), "5CE6FF", "head", kind="neon")
+
+# Emperor Penguin: midnight penguin with a gold crown and royal cape
+a = variant("Penguin", "Emperor Penguin", {"232A3A": "10141F", "F7A21E": "FFC21C", "E23B3B": "B0102A"})
+a.group = "Secret"
+a.b((0.6, 0.6, 0.16), (0, 0.05, 2.03), "FFC21C", "head")
+for x, y in ((-0.22, 0.22), (0.22, 0.22), (-0.22, -0.12), (0.22, -0.12)):
+    a.b((0.12, 0.12, 0.22), (x, y, 2.2), "FFC21C", "head").b((0.08, 0.08, 0.08), (x, y, 2.35), "FF3B6B", "head", kind="neon")
+a.b((1.0, 0.12, 1.3), (0, -0.46, 0.85), "B0102A").b((1.02, 0.14, 0.14), (0, -0.46, 1.48), "FFFFFF")
+a.m((0.5, 0.06, 0.22), (0.3, 0.42, 1.25), "FFC21C")
+
+# Galaxy Whale: new floating whale covered in stars
+a = Brick("Galaxy Whale", "Secret")
+N, B, L = "1B1F5C", "3B4AA0", "8C7BFF"
+a.b((1.8, 3.2, 1.5), (0, 0, 1.6), N).b((1.6, 1.0, 1.3), (0, 1.9, 1.55), N, "head").pivot("head", (0, 1.5, 1.5))
+a.b((1.5, 3.0, 0.2), (0, 0.1, 0.9), B).b((1.2, 0.9, 0.18), (0, 1.9, 0.95), B, "head")
+for y in (-0.9, -0.3, 0.3, 0.9):
+    a.b((1.2, 0.08, 0.08), (0, y, 0.82), L)
+a.m((0.08, 0.16, 0.18), (0.82, 2.0, 1.75), "FFFFFF", "head").m((0.09, 0.1, 0.12), (0.83, 2.04, 1.74), "141418", "head")
+a.b((0.9, 1.2, 0.9), (0, -2.1, 1.75), N, "tail").pivot("tail", (0, -1.5, 1.7))
+a.b((2.2, 0.6, 0.18), (0, -2.85, 1.95), N, "tail").b((0.6, 0.5, 0.2), (0, -2.85, 1.95), L, "tail", kind="neon")
+a.m((0.9, 0.7, 0.12), (1.1, 0.6, 1.1), N, "wingR", rot=(0, 25, 0)).pivot("wingR", (0.85, 0.6, 1.3)).pivot("wingL", (-0.85, 0.6, 1.3))
+a.b((0.2, 0.2, 0.5), (0, 1.5, 2.5), L, kind="neon")
+stars(a, ((0.6, 0.8, 2.36), (-0.5, -0.4, 2.36), (0.2, -1.2, 2.36), (-0.3, 1.2, 2.36), (0.91, -0.6, 1.9), (-0.91, 0.2, 1.8),
+          (0.91, 1.0, 1.5), (-0.91, -1.1, 1.4), (0.5, 2.1, 2.21), (-0.4, 1.7, 2.21)))
+
+# Nuclear Frog: toxic-green frog with a glowing radiation mark
+a = Brick("Nuclear Frog", "Secret")
+G, D, Y = "6BFF3A", "2E9A1C", "FFE14A"
+a.b((1.3, 1.4, 0.8), (0, 0, 0.55), G).b((1.1, 1.2, 0.12), (0, 0.05, 0.12), "C8FF9A")
+a.b((1.2, 0.8, 0.5), (0, 0.6, 1.05), G, "head").pivot("head", (0, 0.4, 0.9))
+a.b((1.22, 0.1, 0.1), (0, 1.0, 0.95), D, "head")
+for x in (0.38, -0.38):
+    a.b((0.42, 0.42, 0.42), (x, 0.55, 1.4), G, "head").b((0.3, 0.06, 0.3), (x, 0.77, 1.42), "FFFFFF", "head")
+    a.b((0.16, 0.07, 0.2), (x, 0.8, 1.42), "141418", "head").b((0.06, 0.08, 0.07), (x - 0.04, 0.84, 1.48), "FFFFFF", "head", kind="neon")
+a.b((0.5, 0.5, 0.06), (0, -0.15, 0.97), Y, kind="neon").b((0.16, 0.16, 0.08), (0, -0.15, 0.99), "141418")
+for r in (0, 120, 240):
+    a.b((0.12, 0.22, 0.07), (0, -0.15, 0.99), "141418", rot=(0, 0, r))
+a.m((0.4, 0.7, 0.3), (0.62, -0.35, 0.3), G, "legBR").pivot("legBR", (0.55, -0.2, 0.45)).pivot("legBL", (-0.55, -0.2, 0.45))
+a.m((0.5, 0.6, 0.08), (0.72, -0.45, 0.04), D, "legBR")
+a.m((0.22, 0.3, 0.5), (0.45, 0.55, 0.25), G, "legFR").pivot("legFR", (0.45, 0.55, 0.5)).pivot("legFL", (-0.45, 0.55, 0.5))
+stars(a, ((0.66, 0.3, 0.6), (-0.66, -0.2, 0.7), (0.4, -0.6, 0.97)), "B8FF4A", 0.1)
+
+# Cursed Teddy: stitched-up dark teddy with one glowing red eye and one button eye
+a = Brick("Cursed Teddy", "Secret")
+F, P, S = "5A3A2A", "8A6A50", "1C1414"
+a.b((1.0, 0.8, 1.0), (0, 0, 0.6), F).b((0.6, 0.1, 0.65), (0, 0.42, 0.6), P)
+a.b((0.04, 0.12, 0.6), (0.05, 0.47, 0.6), S, rot=(0, 20, 0))
+a.b((0.95, 0.85, 0.85), (0, 0.05, 1.5), F, "head").pivot("head", (0, 0.05, 1.1))
+a.m((0.3, 0.25, 0.3), (0.4, 0.05, 2.0), F, "earR").pivot("earR", (0.4, 0.05, 1.85)).pivot("earL", (-0.4, 0.05, 1.85))
+a.m((0.16, 0.1, 0.16), (0.4, 0.15, 2.0), P, "earR")
+a.b((0.42, 0.15, 0.28), (0, 0.5, 1.35), P, "head").b((0.14, 0.08, 0.08), (0, 0.58, 1.42), S, "head")
+a.b((0.18, 0.06, 0.18), (0.2, 0.49, 1.62), "FF1A2A", "head", kind="neon")
+a.b((0.18, 0.06, 0.18), (-0.2, 0.49, 1.62), "141418", "head")
+a.b((0.14, 0.07, 0.04), (-0.2, 0.52, 1.62), P, "head", rot=(0, 45, 0)).b((0.14, 0.07, 0.04), (-0.2, 0.52, 1.62), P, "head", rot=(0, -45, 0))
+a.b((0.36, 0.06, 0.04), (0, 0.49, 1.23), S, "head")
+for x in (-0.12, 0, 0.12):
+    a.b((0.03, 0.07, 0.1), (x, 0.5, 1.23), S, "head")
+a.m((0.3, 0.3, 0.6), (0.62, 0.1, 0.65), F, "armR", rot=(0, -20, 0)).pivot("armR", (0.5, 0.05, 0.9)).pivot("armL", (-0.5, 0.05, 0.9))
+a.m((0.35, 0.45, 0.3), (0.3, 0.25, 0.15), F, "legFR").pivot("legFR", (0.3, 0.1, 0.3)).pivot("legFL", (-0.3, 0.1, 0.3))
+a.m((0.2, 0.06, 0.2), (0.3, 0.48, 0.15), P, "legFR")
+
+# Griffin (Fantasy Mythic): eagle-headed lion with big wings
+a = variant("Lion", "Griffin", {"E8B05A": "C89A5A", "F5DDB0": "F5E8D0", "A65A1E": "FFFFFF", "C8742C": "EDEDED", "5C2E14": "FFC21C",
+                                "neon:FFD23C": "FFFFFF"})
+a.group = "Fantasy"
+a.b((0.3, 0.3, 0.2), (0, 2.1, 1.85), "FFC21C", "head", rot=(20, 0, 0))
+wings(a, 0.65, 0.0, 1.9, "F5E8D0", "C89A5A", 1.5)
+
+# Nebula Fox (Enchanted Egg exclusive): deep-space fox with pink fur and cyan eyes
+a = variant("Fox", "Nebula Fox", {"F07A26": "5A2A9A", "FFF6EA": "FF8AD8", "2A1D18": "1A1040", "141418": ("6FF0FF", "neon"), "1C1414": "FF8AD8"})
+a.group = "Exclusive"
+stars(a, ((0.41, 0.2, 1.1), (-0.41, -0.3, 1.2), (0.41, -0.5, 0.9), (0.2, 0.9, 1.75)))
+
+
+# =============================== CINEMATIC FX PROPS (posed per frame by the Secret cinematics) ===============================
+# Each prop's origin is where the cinematic pins it; "forward" is +Y like the pets.
+import math as _fm
+
+a = Brick("FX Rainbow Beam", "FX")
+for i, col in enumerate(("FF4A5A", "FF9A2A", "FFE03A", "4CD964", "3AA8FF", "9B5CFF")):
+    a.b((0.34, 6.0, 0.22), (0, 3.0, 0.62 - i * 0.24), col, kind="neon")
+a.b((0.5, 0.3, 0.5), (0, 0.15, 0), "FFFFFF", kind="neon", rot=(0, 45, 0))
+
+a = Brick("FX Smoke", "FX")
+for x, y, z, s, c in ((0, 0, 0.7, 1.4, "3A2A55"), (0.7, 0.2, 0.5, 0.9, "2A2236"), (-0.6, -0.3, 0.6, 1.0, "4A3A6A"), (0.2, -0.6, 1.3, 0.8, "5A4A7A"),
+                      (-0.3, 0.5, 1.4, 0.7, "2A2236"), (0.5, -0.2, 1.8, 0.6, "6A5A8A"), (-0.5, 0, 0.2, 0.8, "1C1828")):
+    a.b((s, s, s), (x, y, z), c)
+a.b((0.4, 0.4, 0.4), (0.1, 0.1, 1.0), "B45CFF", kind="neon")
+
+a = Brick("FX Feather", "FX")
+a.b((0.06, 1.0, 0.06), (0, 0, 0), "FFF4C2").b((0.32, 0.8, 0.05), (0, 0.08, 0), "FFC21C").b((0.2, 0.3, 0.06), (0, 0.42, 0), "FFE45C", kind="neon")
+
+for name, body, ring in (("FX Planet A", "FF6AD5", "FFE45C"), ("FX Planet B", "3AA8FF", "C8F6FF"), ("FX Planet C", "FF9A2A", "FFF4C2")):
+    a = Brick(name, "FX")
+    a.b((0.9, 0.65, 0.65), (0, 0, 0), body).b((0.65, 0.9, 0.65), (0, 0, 0), body).b((0.65, 0.65, 0.9), (0, 0, 0), body)
+    for k in range(8):
+        t = 2 * _fm.pi * k / 8
+        a.b((0.5, 0.08, 0.05), (_fm.cos(t) * 0.75, _fm.sin(t) * 0.75, 0), ring, kind="neon", rot=(0, 0, _fm.degrees(t) + 90))
+
+a = Brick("FX Crystal Ring", "FX")
+for k in range(14):
+    t = 2 * _fm.pi * k / 14
+    h = 0.9 + 0.5 * (k % 2)
+    a.b((0.3, 0.3, h), (_fm.cos(t) * 2.0, _fm.sin(t) * 2.0, h / 2), "8FF0FF" if k % 2 else "C8F6FF", kind="glass", rot=(0, 18, _fm.degrees(t)))
+for k in range(14):
+    t = 2 * _fm.pi * (k + 0.5) / 14
+    a.b((0.5, 0.1, 0.06), (_fm.cos(t) * 2.0, _fm.sin(t) * 2.0, 0.04), "6FF0FF", kind="neon", rot=(0, 0, _fm.degrees(t) + 90))
+
+a = Brick("FX Lava Cracks", "FX")
+for k in range(9):
+    t = 2 * _fm.pi * k / 9 + 0.3 * (k % 2)
+    ln = 1.6 + 0.9 * ((k * 7) % 3) / 2
+    a.b((ln, 0.22, 0.06), (_fm.cos(t) * (ln / 2 + 0.3), _fm.sin(t) * (ln / 2 + 0.3), 0.03), "FF5A1C", kind="neon", rot=(0, 0, _fm.degrees(t)))
+    a.b((0.5, 0.16, 0.07), (_fm.cos(t) * (ln + 0.4), _fm.sin(t) * (ln + 0.4), 0.035), "FFD23C", kind="neon", rot=(0, 0, _fm.degrees(t) + 35))
+a.b((1.0, 1.0, 0.08), (0, 0, 0.04), "FF7A1C", kind="neon", rot=(0, 0, 45))
+
+a = Brick("FX UFO", "FX")
+a.b((3.2, 3.2, 0.3), (0, 0, 0), "9AA4B2").b((2.3, 2.3, 0.3), (0, 0, 0.28), "C8D0DC").b((2.2, 2.2, 0.2), (0, 0, -0.22), "5A6070")
+a.b((1.2, 1.2, 0.8), (0, 0, 0.75), "8FF0FF", kind="glass")
+for k in range(8):
+    t = 2 * _fm.pi * k / 8
+    a.b((0.22, 0.22, 0.14), (_fm.cos(t) * 1.45, _fm.sin(t) * 1.45, 0.05), "B8FF4A" if k % 2 else "FF6AD5", kind="neon")
+a.b((0.9, 0.9, 0.1), (0, 0, -0.34), "B8FF4A", kind="neon")
+
+a = Brick("FX UFO Beam", "FX")
+a.b((1.5, 1.5, 5.0), (0, 0, -2.5), "B8FF4A", kind="glass").b((0.9, 0.9, 5.0), (0, 0, -2.5), "E8FFC8", kind="glass")
+
+a = Brick("FX Diamond", "FX")
+a.b((0.42, 0.42, 0.42), (0, 0, 0), "8FF0FF", kind="glass", rot=(45, 35, 0)).b((0.18, 0.18, 0.18), (0, 0, 0), "FFFFFF", kind="neon", rot=(45, 35, 0))
+
+a = Brick("FX Star Vortex", "FX")
+for k in range(22):
+    t = k * 0.55
+    r = 3.0 - k * 0.1
+    a.b((0.22, 0.22, 0.22), (_fm.cos(t) * r, _fm.sin(t) * r, k * 0.22), ("FFFFFF", "C8A8FF", "8C7BFF", "6FF0FF")[k % 4], kind="neon", rot=(0, 0, 45))
+for k in range(16):
+    t = 2 * _fm.pi * k / 16
+    a.b((1.2, 0.12, 0.06), (_fm.cos(t) * 3.2, _fm.sin(t) * 3.2, 0), "8C7BFF", kind="neon", rot=(0, 0, _fm.degrees(t) + 90))
+
+a = Brick("FX Toxic Ring", "FX")
+for k in range(16):
+    t = 2 * _fm.pi * k / 16
+    a.b((0.9, 0.24, 0.12), (_fm.cos(t) * 2.0, _fm.sin(t) * 2.0, 0.06), "6BFF3A" if k % 2 else "B8FF4A", kind="neon", rot=(0, 0, _fm.degrees(t) + 90))
+for k in range(6):
+    t = 2 * _fm.pi * k / 6
+    a.b((0.35, 0.35, 0.35), (_fm.cos(t) * 1.2, _fm.sin(t) * 1.2, 0.5 + 0.3 * (k % 2)), "6BFF3A", kind="glass")
+
+a = Brick("FX Ice Floor", "FX")
+for k in range(10):
+    t = 2 * _fm.pi * k / 10
+    a.b((2.6, 1.3, 0.08), (_fm.cos(t) * 1.8, _fm.sin(t) * 1.8, 0.04), "C8F6FF" if k % 2 else "E8FAFF", kind="glass", rot=(0, 0, _fm.degrees(t)))
+    a.b((0.3, 0.3, 0.9 + 0.5 * (k % 3) / 2), (_fm.cos(t) * 3.2, _fm.sin(t) * 3.2, 0.45), "8FF0FF", kind="glass", rot=(15, 0, _fm.degrees(t)))
+a.b((2.4, 2.4, 0.09), (0, 0, 0.045), "FFFFFF", kind="glass", rot=(0, 0, 45))
+
+a = Brick("FX Jetpack", "FX")
+a.m((0.32, 0.32, 0.8), (0.24, 0, 0), "9AA4B2").m((0.24, 0.24, 0.18), (0.24, 0, -0.48), "3A3F4A")
+a.m((0.22, 0.22, 0.5), (0.24, 0, -0.8), "5CE6FF", kind="neon").m((0.12, 0.12, 0.35), (0.24, 0, -1.15), "FFFFFF", kind="neon")
+a.b((0.6, 0.18, 0.5), (0, 0.18, 0.1), "5A6070").b((0.5, 0.06, 0.08), (0, 0.28, 0.25), "FF2A6A", kind="neon")
+
+a = Brick("FX Dark Aura", "FX")
+for k in range(12):
+    t = 2 * _fm.pi * k / 12
+    a.b((0.2, 0.2, 1.0 + 0.6 * (k % 2)), (_fm.cos(t) * 1.6, _fm.sin(t) * 1.6, 0.6), "FF1A2A" if k % 3 == 0 else "3A1A2A", kind="neon" if k % 3 == 0 else "plastic", rot=(0, 20, _fm.degrees(t)))
+a.b((3.4, 3.4, 0.06), (0, 0, 0.03), "1C0A12", rot=(0, 0, 45))
+
+a = Brick("FX Throne", "FX")
+G, R = "FFC21C", "B0102A"
+a.b((2.0, 1.6, 0.9), (0, 0, 0.45), G).b((1.8, 1.4, 0.2), (0, 0.05, 0.98), R)
+a.b((2.0, 0.4, 2.6), (0, -0.6, 1.9), G).b((1.5, 0.12, 1.9), (0, -0.38, 2.0), R)
+a.m((0.3, 1.5, 0.3), (0.95, 0, 1.25), G)
+for x in (-0.7, 0, 0.7):
+    a.b((0.3, 0.3, 0.5), (x, -0.6, 3.4), G).b((0.16, 0.16, 0.16), (x, -0.45, 3.4), "FF3B6B" if x else "5CE6FF", kind="neon")
+
+a = Brick("FX Carpet", "FX")
+a.b((1.6, 6.0, 0.06), (0, 3.0, 0.03), "B0102A").b((1.75, 6.0, 0.05), (0, 3.0, 0.025), "FFC21C")
