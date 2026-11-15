@@ -131489,6 +131489,7 @@ end
 -- through the luck tiers while the name reveals, clovers raining, then a slam. Returns the pill (kept up with the card).
 local function oneInReveal(odds: number, color: Color3, center: Vector3, duration: number, onFrame: (number) -> (), ownCamera: boolean?): Frame
 	screenFlash(Color3.new(0, 0, 0), 0.85)
+	banner.Visible = false -- the luck / zone banner would sit behind the counter pill
 	local pill = make("Frame", { Size = UDim2.fromOffset(420, 84), Position = UDim2.new(0.5, 0, 0, 92), AnchorPoint = Vector2.new(0.5, 0.5),
 		BackgroundColor3 = Color3.fromRGB(20, 20, 30), BackgroundTransparency = 0.45, ZIndex = 20, Parent = overlay },
 		{ make("UICorner", { CornerRadius = UDim.new(0.5, 0) }) })
