@@ -391,11 +391,6 @@ for side, rot in ((-1, math.pi / 2), (1, -math.pi / 2)):
         L = lambda lx, ly, lz: tf(o, rot, lx, ly, lz)
         pm.add(part("Floor", (46, 0.4, 60), L(0, 0.2, 0), "4FB83A", rot=rot))
         pm.add(part("Border", (48, 0.3, 62), L(0, 0.05, 0), "E8D9A8", rot=rot, collide=False))
-        for col in range(6):  # pet pedestals
-            for row in range(5):
-                lx = -23 + 4 + col * (46 - 8) / 5
-                lz = -30 + 5 + row * 7.5
-                pm.add(part("Pedestal", (4.6, 0.3, 4.6), L(lx, 0.45, lz), "5CC844" if (col + row) % 2 else "6AD452", rot=rot, collide=False))
         for lx in (-23.5, 23.5):
             pm.add(part("Fence", (0.6, 0.6, 60), L(lx, 2.2, 0), "C8935A", rot=rot))
             pm.add(part("Fence", (0.6, 0.6, 60), L(lx, 1.1, 0), "C8935A", rot=rot))

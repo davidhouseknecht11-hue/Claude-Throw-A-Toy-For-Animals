@@ -703,78 +703,87 @@ Remotes.Hatch.OnClientEvent:Connect(function(eggName: string, results)
 	end)
 end)
 
--- ---------- ANIMALS ----------
-local animalsFrame, animalsBody = panel("🐾 My Animals", C.Orange)
-local plotCount = label({ Text = "ON YOUR PLOT 0/6", Size = UDim2.new(0.6, 0, 0, 30), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.Gold, Parent = animalsBody })
-local animalsList = make("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -100), Position = UDim2.new(0, 0, 0, 36), BackgroundTransparency = 1, ScrollBarThickness = 8,
-	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = animalsBody },
-	{ make("UIGridLayout", { CellSize = UDim2.new(0.5, -8, 0, 92), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder }) })
-button({ Size = UDim2.new(0.48, 0, 0, 52), Position = UDim2.new(0, 0, 1, -56), Text = "⭐ EQUIP BEST", Color = C.Orange, Parent = animalsBody }, function()
+-- ---------- ANIMALS (right-docked "My Animals" list, like the original) ----------
+local animalsFrame = make("Frame", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.new(1, -14, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5),
+	BackgroundColor3 = Color3.fromRGB(26, 24, 40), Visible = false, Parent = gui }, {
+	corner(18), stroke(4),
+	make("UISizeConstraint", { MinSize = Vector2.new(330, 360), MaxSize = Vector2.new(460, 700) }),
+})
+do
+	local head = make("Frame", { Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = C.White, Parent = animalsFrame },
+		{ corner(18), gradient(Color3.fromRGB(255, 120, 200), Color3.fromRGB(190, 70, 255), 0), stroke(4) })
+	label({ Text = "My Animals", Size = UDim2.new(0.5, 0, 0.7, 0), Position = UDim2.new(0, 14, 0.15, 0), TextXAlignment = Enum.TextXAlignment.Left, Parent = head, StrokeSize = 3 })
+	button({ Size = UDim2.fromOffset(44, 44), Position = UDim2.new(1, -52, 0, 7), Text = "X", Color = C.Red, Parent = head }, function()
+		animalsFrame.Visible = false
+		openPanel = nil
+	end)
+end
+local countPill = make("Frame", { Size = UDim2.fromOffset(104, 40), Position = UDim2.new(1, -164, 0, 9), BackgroundColor3 = Color3.fromRGB(60, 30, 90), Parent = animalsFrame },
+	{ make("UICorner", { CornerRadius = UDim.new(0.5, 0) }), stroke(3) })
+viewport("Icon Paw", make("Frame", { Size = UDim2.fromOffset(34, 34), Position = UDim2.fromOffset(4, 3), BackgroundTransparency = 1, Parent = countPill }), false, true)
+local plotCount = label({ Text = "0/6", Size = UDim2.new(1, -44, 0.8, 0), Position = UDim2.new(0, 40, 0.1, 0), Parent = countPill })
+local animalsList = make("ScrollingFrame", { Size = UDim2.new(1, -20, 1, -150), Position = UDim2.fromOffset(10, 68), BackgroundTransparency = 1, ScrollBarThickness = 8,
+	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = animalsFrame },
+	{ make("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }), make("UIPadding", { PaddingRight = UDim.new(0, 10) }) })
+button({ Size = UDim2.new(1, -20, 0, 64), Position = UDim2.new(0, 10, 1, -74), Text = "EQUIP BEST", Color = C.Orange, Parent = animalsFrame }, function()
 	local ok, msg = Remotes.Request:InvokeServer("EquipBest")
 	if msg then
 		toast(msg, ok and "good" or "bad")
 	end
 end)
-button({ Size = UDim2.new(0.48, 0, 0, 52), Position = UDim2.new(0.52, 0, 1, -56), Text = "💰 SELL BACKPACK", Color = C.Red, Parent = animalsBody }, function()
-	local ok, msg = Remotes.Request:InvokeServer("SellBackpack")
-	if msg then
-		toast(msg, ok and "good" or "bad")
-	end
-	if ok then
-		play("Buy")
-	end
-end)
+
+local function rarityColor(name: string): Color3
+	return Config.Rarities[Config.RarityIndex[Config.AnimalInfo[name].Rarity]].Color
+end
 
 local function refreshAnimals()
-	if not Data or not animalsFrame.Visible then
+	if not Data then
 		return
 	end
-	for _, ch in animalsList:GetChildren() do
-		if ch:IsA("Frame") then
-			ch:Destroy()
+	local placed = 0
+	for _, a in Data.Animals do
+		placed += a.Placed and 1 or 0
+	end
+	plotCount.Text = placed .. "/" .. Data.Slots
+	if not animalsFrame.Visible then
+		return
+	end
+	for _, c in animalsList:GetChildren() do
+		if c:IsA("Frame") then
+			c:Destroy()
 		end
 	end
-	local placed = 0
 	local sorted = table.clone(Data.Animals)
 	table.sort(sorted, function(a, b)
-		if a.Placed ~= b.Placed then
-			return a.Placed
-		end
 		return a.Income > b.Income
 	end)
 	for i, a in sorted do
-		if a.Placed then
-			placed += 1
-		end
-		local info = Config.AnimalInfo[a.Name]
-		local rc = Config.Rarities[Config.RarityIndex[info.Rarity]].Color
-		local row = make("Frame", { LayoutOrder = i, BackgroundColor3 = C.Dark, Parent = animalsList }, { corner(12), stroke(3, a.Placed and C.Green or C.Dark) })
-		local thumb = make("Frame", { Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = rc:Lerp(C.Dark, 0.4), Parent = row }, { corner(10) })
+		local rc = rarityColor(a.Name)
+		local row = make("Frame", { Size = UDim2.new(1, 0, 0, 96), LayoutOrder = i, BackgroundColor3 = Color3.fromRGB(44, 40, 64), Parent = animalsList },
+			{ corner(14), stroke(3, a.Placed and C.Green or C.Dark) })
+		local thumb = make("Frame", { Size = UDim2.fromOffset(80, 80), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = C.White, Parent = row },
+			{ corner(12), gradient(rc:Lerp(C.White, 0.25), rc:Lerp(C.Dark, 0.2), 90) })
 		viewport(a.Name, thumb, nil, nil, a.Mutation)
-		local tags = {}
+		local tag = {}
 		if a.Mutation ~= "None" then
 			local mc = (Config.Find(Config.Mutations, a.Mutation).Color :: Color3):ToHex()
-			table.insert(tags, string.format('<font color="#%s">%s</font>', mc, a.Mutation:upper()))
+			table.insert(tag, string.format('<font color="#%s">%s</font>', mc, a.Mutation:upper()))
 		end
 		if a.Size ~= "Normal" then
-			table.insert(tags, a.Size:upper())
+			table.insert(tag, a.Size:upper())
 		end
-		label({ Text = table.concat(tags, " "), Size = UDim2.new(0.4, 0, 0, 16), Position = UDim2.fromOffset(94, 6), TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
-		label({ Text = a.Name, Size = UDim2.new(0.45, 0, 0, 28), Position = UDim2.fromOffset(94, 22), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = rc, Parent = row })
-		label({ Text = "$" .. Util.Format(a.Income) .. "/s", Size = UDim2.new(0.4, 0, 0, 22), Position = UDim2.fromOffset(94, 54), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.Green, Parent = row })
-		button({ Size = UDim2.new(0.3, 0, 0, 36), Position = UDim2.new(0.68, 0, 0, 6), Text = a.Placed and "PICK UP" or "PLACE", Color = a.Placed and C.Blue or C.Green, Parent = row }, function()
+		label({ Text = table.concat(tag, " "), Size = UDim2.new(1, -210, 0, 18), Position = UDim2.fromOffset(96, 10), TextXAlignment = Enum.TextXAlignment.Left, Parent = row })
+		label({ Text = a.Name, Size = UDim2.new(1, -210, 0, 32), Position = UDim2.fromOffset(96, 28), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = rc, Parent = row })
+		label({ Text = "$" .. Util.Format(a.Income) .. "/s", Size = UDim2.new(1, -210, 0, 24), Position = UDim2.fromOffset(96, 62), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = C.Green, Parent = row })
+		button({ Size = UDim2.fromOffset(100, 38), Position = UDim2.new(1, -108, 0, 8), Text = a.Placed and "UNEQUIP" or "EQUIP", Color = a.Placed and C.Blue or C.Green, Parent = row }, function()
 			local ok, msg = Remotes.Request:InvokeServer("Place", a.Id)
 			if msg then
 				toast(msg, ok and "good" or "bad")
 			end
 		end)
-		local held = Data.HeldId == a.Id
-		button({ Size = UDim2.new(0.145, 0, 0, 36), Position = UDim2.new(0.835, 0, 0, 48), Text = held and "HELD" or "HOLD", Color = held and C.Purple or C.Orange, Parent = row }, function()
-			Remotes.Request:InvokeServer("Hold", a.Id)
-		end)
 		local confirm = false
 		local sell
-		sell = button({ Size = UDim2.new(0.145, 0, 0, 36), Position = UDim2.new(0.68, 0, 0, 48), Text = "SELL", Color = C.Red, Parent = row }, function()
+		sell = button({ Size = UDim2.fromOffset(100, 38), Position = UDim2.new(1, -108, 0, 50), Text = "SELL", Color = C.Red, Parent = row }, function()
 			if not confirm then
 				confirm = true
 				sell.Text = "SURE?"
@@ -795,8 +804,112 @@ local function refreshAnimals()
 			end
 		end)
 	end
-	plotCount.Text = string.format("ON YOUR PLOT %d/%d   •   BACKPACK %d", placed, Data.Slots, #Data.Animals - placed)
 end
+
+-- ---------- PET HOTBAR (1-0): your un-placed pets; pick one to hold it, then click your plot floor to place it ----------
+game:GetService("StarterGui"):SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false) -- this bar replaces the default one
+local HOTBAR_KEYS = { Enum.KeyCode.One, Enum.KeyCode.Two, Enum.KeyCode.Three, Enum.KeyCode.Four, Enum.KeyCode.Five,
+	Enum.KeyCode.Six, Enum.KeyCode.Seven, Enum.KeyCode.Eight, Enum.KeyCode.Nine, Enum.KeyCode.Zero }
+local hotbar = make("Frame", { Size = UDim2.fromOffset(10 * 70 - 6, 70), Position = UDim2.new(0.5, 0, 1, -10), AnchorPoint = Vector2.new(0.5, 1),
+	BackgroundTransparency = 1, Parent = hud },
+	{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+local tip = make("Frame", { Size = UDim2.fromOffset(330, 58), AnchorPoint = Vector2.new(0.5, 1), BackgroundColor3 = Color3.fromRGB(26, 24, 40),
+	BackgroundTransparency = 0.1, Visible = false, ZIndex = 5, Parent = hud }, { corner(10), stroke(2) })
+local tipName = label({ Text = "", Size = UDim2.new(1, -16, 0, 26), Position = UDim2.fromOffset(8, 4), ZIndex = 6, Parent = tip })
+local tipInfo = label({ Text = "", Size = UDim2.new(1, -16, 0, 20), Position = UDim2.fromOffset(8, 32), ZIndex = 6, TextColor3 = Color3.fromRGB(210, 210, 225), Parent = tip, StrokeSize = 1.5 })
+local hotbarPets = {} -- slot index -> animal
+
+local function hold(a)
+	if a then
+		Remotes.Request:InvokeServer("Hold", a.Id) -- picking the held one again puts it away
+	end
+end
+
+local function refreshHotbar()
+	for _, c in hotbar:GetChildren() do
+		if c:IsA("GuiObject") then
+			c:Destroy()
+		end
+	end
+	table.clear(hotbarPets)
+	if not Data then
+		return
+	end
+	local pool = {}
+	for _, a in Data.Animals do
+		if not a.Placed then
+			table.insert(pool, a)
+		end
+	end
+	table.sort(pool, function(x, y)
+		return x.Income > y.Income
+	end)
+	for i = 1, 10 do
+		local a = pool[i]
+		hotbarPets[i] = a
+		local held = a and Data.HeldId == a.Id
+		local slot = make("TextButton", { Size = UDim2.fromOffset(64, 64), LayoutOrder = i, Text = "", AutoButtonColor = false,
+			BackgroundColor3 = held and Color3.fromRGB(70, 60, 110) or C.Dark, BackgroundTransparency = a and 0.15 or 0.5, Parent = hotbar },
+			{ corner(10), stroke(held and 4 or 2, held and C.Gold or Color3.fromRGB(90, 90, 110)) })
+		label({ Text = tostring(i % 10), Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 3, 1, -18), Parent = slot, StrokeSize = 1.5 })
+		if a then
+			viewport(a.Name, make("Frame", { Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.16), BackgroundTransparency = 1, Parent = slot }), nil, nil, a.Mutation)
+			label({ Text = "$" .. Util.Format(a.Income) .. "/s", Size = UDim2.new(1, -4, 0, 14), Position = UDim2.fromOffset(2, 2), TextColor3 = C.Green, Parent = slot, StrokeSize = 1.5 })
+			slot.MouseEnter:Connect(function()
+				local tags = {}
+				if a.Mutation ~= "None" then
+					table.insert(tags, a.Mutation)
+				end
+				if a.Size ~= "Normal" then
+					table.insert(tags, a.Size)
+				end
+				table.insert(tags, "$" .. Util.Format(a.Income) .. "/s")
+				tipName.Text = a.Name
+				tipName.TextColor3 = rarityColor(a.Name)
+				tipInfo.Text = table.concat(tags, " | ") .. " - click your plot floor to place"
+				tip.Position = UDim2.new(0, slot.AbsolutePosition.X + 32, 1, -86)
+				tip.Visible = true
+			end)
+			slot.MouseLeave:Connect(function()
+				tip.Visible = false
+			end)
+			slot.Activated:Connect(function()
+				play("Click")
+				hold(a)
+			end)
+		end
+	end
+end
+
+UIS.InputBegan:Connect(function(input, processed)
+	if processed or busy or onPad then
+		return
+	end
+	local idx = table.find(HOTBAR_KEYS, input.KeyCode)
+	if idx then
+		hold(hotbarPets[idx])
+		return
+	end
+	-- holding a pet: click your own plot's floor to put it down there
+	if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and Data and Data.HeldId then
+		local plot = Map.Plots:FindFirstChild(player:GetAttribute("PlotName") or "")
+		local pos = input.Position
+		local ray = camera:ViewportPointToRay(pos.X, pos.Y)
+		local params = RaycastParams.new()
+		params.FilterType = Enum.RaycastFilterType.Exclude
+		params.FilterDescendantsInstances = { player.Character :: any }
+		local hit = workspace:Raycast(ray.Origin, ray.Direction * 500, params)
+		if plot and hit and hit.Instance:IsDescendantOf(plot) then
+			local ok, msg = Remotes.Request:InvokeServer("Place", Data.HeldId)
+			if msg then
+				toast(msg, ok and "good" or "bad")
+			end
+			if ok then
+				play("Buy")
+			end
+		end
+	end
+end)
 
 -- ---------- INDEX ----------
 local indexFrame, indexBody = panel("📖 Animal Index", C.Blue)
@@ -861,6 +974,7 @@ Remotes.Data.OnClientEvent:Connect(function(d)
 	refreshShop()
 	refreshPasses()
 	refreshAnimals()
+	refreshHotbar()
 	refreshIndex()
 	updateStats()
 end)
@@ -881,7 +995,7 @@ task.spawn(function()
 end)
 
 -- ===================== TRAINING UI =====================
-local trainUI = make("Frame", { Size = UDim2.fromOffset(420, 120), Position = UDim2.new(0.5, 0, 1, -30), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, Visible = false, Parent = hud })
+local trainUI = make("Frame", { Size = UDim2.fromOffset(420, 120), Position = UDim2.new(0.5, 0, 1, -90), AnchorPoint = Vector2.new(0.5, 1), BackgroundTransparency = 1, Visible = false, Parent = hud })
 local trainLabel = label({ Text = "", Size = UDim2.new(1, 0, 0, 40), Parent = trainUI, TextColor3 = Color3.fromRGB(110, 210, 255) })
 button({ Size = UDim2.fromOffset(180, 56), Position = UDim2.new(0.5, -90, 0, 52), Text = "STOP", Color = C.Red, Parent = trainUI }, function()
 	Remotes.Train:FireServer(false)
@@ -1660,7 +1774,12 @@ local function addPet(m: Instance)
 	pets[m] = { Pos = m:GetPivot(), Rig = buildRig(m), Shimmer = Mutations.RainbowParts(m), Floor = plot and plot:FindFirstChild("Floor") :: BasePart?,
 		Target = nil, NextMove = os.clock() + math.random() * 4, Speed = (3 + math.random() * 1.5) * m:GetScale() ^ 0.5 }
 end
-CollectionService:GetInstanceAddedSignal("PlotPet"):Connect(addPet)
+CollectionService:GetInstanceAddedSignal("PlotPet"):Connect(function(m)
+	task.wait(0.3) -- the tag can arrive before all of the pet's bricks; a rig built then would miss them
+	if m.Parent then
+		addPet(m)
+	end
+end)
 
 -- held pets (Tools built by the server): the same idle / walk bone animation, applied through each part's Weld
 local held: { [Instance]: { Welds: { any }, Pivots: { [string]: Vector3 }, Shimmer: { BasePart }, Phase: number } } = {}
@@ -1710,8 +1829,21 @@ RunService.Heartbeat:Connect(function(dt)
 			pets[m] = nil
 			continue
 		end
-		if not e.Rig or (e.Pos.Position - camP).Magnitude > 140 then
+		if not e.Rig then -- streamed in after its tag arrived: build the rig once the parts are here
+			e.Rig, e.Pos = buildRig(m), m:GetPivot()
+			e.Shimmer = Mutations.RainbowParts(m)
+			local plot = m.Parent and m.Parent.Parent
+			e.Floor = plot and plot:FindFirstChild("Floor") :: BasePart?
+			if not e.Rig then
+				continue
+			end
+		end
+		if (e.Pos.Position - camP).Magnitude > 140 then
 			continue
+		end
+		if not e.Floor then -- the plot floor can stream in later than the pet
+			local plot = m.Parent and m.Parent.Parent
+			e.Floor = plot and plot:FindFirstChild("Floor") :: BasePart?
 		end
 		local walking = false
 		if e.Target then

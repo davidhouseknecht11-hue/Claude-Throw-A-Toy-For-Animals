@@ -209,10 +209,11 @@ local function renderPlot(prof)
 		local m = template:Clone()
 		local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 		m:ScaleTo(size.Scale)
-		local local_ = CFrame.new(-floor.Size.X / 2 + 4 + col * spacingX, floor.Size.Y / 2 + 0.2, -floor.Size.Z / 2 + 5 + row * 7.5) -- on the pedestal
+		local local_ = CFrame.new(-floor.Size.X / 2 + 4 + col * spacingX, floor.Size.Y / 2, -floor.Size.Z / 2 + 5 + row * 7.5) -- starting spot; they wander from here
 			* CFrame.Angles(0, math.rad(180), 0)
 		m:PivotTo(floor.CFrame * local_)
 		decoratePet(m, a)
+		m.ModelStreamingMode = Enum.ModelStreamingMode.Atomic -- with streaming on, the whole pet arrives at once (the animator needs every brick)
 		local info = Config.AnimalInfo[a.Name]
 		local rc = Config.Rarities[Config.RarityIndex[info.Rarity]].Color
 		local _, ext = m:GetBoundingBox()
@@ -612,9 +613,13 @@ function Actions.Place(player, prof, id: string)
 		return false, "Animal not found"
 	end
 	if not a.Placed and placedCount(d) >= d.Slots then
-		return false, "Your plot is full! Buy more slots."
+		return false, string.format("Your plot is full! (%d animals)", placedCount(d))
 	end
 	a.Placed = not a.Placed
+	if a.Placed and prof.HeldId == id then
+		prof.HeldId = nil -- it's on the plot now, not in your hand
+		holdPet(player, prof)
+	end
 	return true
 end
 
