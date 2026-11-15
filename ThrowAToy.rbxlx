@@ -90542,7 +90542,7 @@ Config.Mutations = {
 Config.StartPower = 10
 Config.StartSlots = 6
 Config.MaxSlots = 30
-Config.MaxAnimals = 120 -- plot + backpack; extra catches auto-sell
+Config.MaxAnimals = 1000 -- plot + inventory slots; extra catches auto-sell
 Config.SellSeconds = 60 -- an animal sells for this many seconds of its income
 Config.IndexZoneBonus = 0.1 -- +10% income per fully discovered zone
 Config.OfflineCapHours = 8
@@ -130874,6 +130874,61 @@ local function hold(a)
 	end
 end
 
+local function petSlot(parent: Instance, a, order: number, number: number?, lazy: boolean?): TextButton
+	local held = a and Data and Data.HeldId == a.Id
+	local slot = make("TextButton", { Size = UDim2.fromOffset(64, 64), LayoutOrder = order, Text = "", AutoButtonColor = false,
+		BackgroundColor3 = held and Color3.fromRGB(70, 60, 110) or Color3.fromRGB(30, 30, 36), BackgroundTransparency = a and 0.25 or 0.5, Parent = parent },
+		{ corner(10), stroke(held and 4 or 2, held and C.Gold or Color3.fromRGB(90, 90, 110)) })
+	if number then
+		label({ Text = tostring(number % 10), Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 3, 1, -18), Parent = slot, StrokeSize = 1.5 })
+	end
+	if not a then
+		return slot
+	end
+	local holder = make("Frame", { Name = "Preview", Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.16), BackgroundTransparency = 1, Parent = slot })
+	if not lazy then
+		viewport(a.Name, holder, nil, nil, a.Mutation)
+	end
+	label({ Text = "$" .. Util.Format(a.Income) .. "/s", Size = UDim2.new(1, -4, 0, 14), Position = UDim2.fromOffset(2, 2), TextColor3 = C.Green, Parent = slot, StrokeSize = 1.5 })
+	slot.MouseEnter:Connect(function()
+		local tags = {}
+		if a.Mutation ~= "None" then
+			table.insert(tags, a.Mutation)
+		end
+		if a.Size ~= "Normal" then
+			table.insert(tags, a.Size)
+		end
+		table.insert(tags, "$" .. Util.Format(a.Income) .. "/s")
+		tipName.Text = a.Name
+		tipName.TextColor3 = rarityColor(a.Name)
+		tipInfo.Text = table.concat(tags, " | ") .. " - click your plot floor to place"
+		tip.Position = UDim2.fromOffset(slot.AbsolutePosition.X + 32, slot.AbsolutePosition.Y - 6)
+		tip.Visible = true
+	end)
+	slot.MouseLeave:Connect(function()
+		tip.Visible = false
+	end)
+	slot.Activated:Connect(function()
+		play("Click")
+		hold(a)
+	end)
+	return slot
+end
+
+local function unplacedByIncome(): { any }
+	local pool = {}
+	for _, a in Data.Animals do
+		if not a.Placed then
+			table.insert(pool, a)
+		end
+	end
+	table.sort(pool, function(x, y)
+		return x.Income > y.Income
+	end)
+	return pool
+end
+
+local refreshInventory -- defined with the inventory panel below
 local function refreshHotbar()
 	for _, c in hotbar:GetChildren() do
 		if c:IsA("GuiObject") then
@@ -130884,54 +130939,98 @@ local function refreshHotbar()
 	if not Data then
 		return
 	end
-	local pool = {}
-	for _, a in Data.Animals do
-		if not a.Placed then
-			table.insert(pool, a)
+	local pool = unplacedByIncome()
+	for i = 1, 10 do
+		hotbarPets[i] = pool[i]
+		petSlot(hotbar, pool[i], i, i)
+	end
+	refreshInventory()
+end
+
+-- ---------- INVENTORY (` key): every un-placed pet that isn't on the hotbar, up to Config.MaxAnimals ----------
+local INV_W = 10 * 70 - 6
+local inventory = make("Frame", { Size = UDim2.fromOffset(INV_W, 300), Position = UDim2.new(0.5, 0, 1, -88), AnchorPoint = Vector2.new(0.5, 1),
+	BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45, Visible = false, Parent = hud }, { corner(14) })
+label({ Text = "Inventory", Size = UDim2.fromOffset(180, 34), Position = UDim2.fromOffset(14, 8), TextXAlignment = Enum.TextXAlignment.Left, Parent = inventory, StrokeSize = 2.5 })
+local search = make("TextBox", { Size = UDim2.fromOffset(300, 32), Position = UDim2.new(0.5, 0, 0, 10), AnchorPoint = Vector2.new(0.5, 0), Text = "",
+	PlaceholderText = "Search", PlaceholderColor3 = Color3.fromRGB(150, 150, 160), TextColor3 = C.White, Font = FONT, TextSize = 18, ClearTextOnFocus = false,
+	BackgroundColor3 = Color3.fromRGB(60, 60, 70), BackgroundTransparency = 0.35, Parent = inventory }, { corner(8) })
+button({ Size = UDim2.fromOffset(40, 40), Position = UDim2.new(1, -50, 0, 6), Text = "X", Color = C.Red, Parent = inventory }, function()
+	inventory.Visible = false
+end)
+local invEmpty = label({ Text = "No other items", Size = UDim2.new(1, 0, 0, 34), Position = UDim2.new(0, 0, 0.5, 0), TextColor3 = Color3.fromRGB(200, 200, 210), Parent = inventory, StrokeSize = 2 })
+local invGrid = make("ScrollingFrame", { Size = UDim2.new(1, -20, 1, -60), Position = UDim2.fromOffset(10, 52), BackgroundTransparency = 1, ScrollBarThickness = 6,
+	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = inventory },
+	{ make("UIGridLayout", { CellSize = UDim2.fromOffset(64, 64), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
+local invSlots = {} -- { slot, animal }
+local invDirty = true
+
+-- only slots on screen get a 3D preview, so 1,000 pets stay cheap
+local function updateInventoryPreviews()
+	local top, h = invGrid.AbsolutePosition.Y, invGrid.AbsoluteSize.Y
+	for _, e in invSlots do
+		local y = e[1].AbsolutePosition.Y - top
+		local holder = e[1]:FindFirstChild("Preview")
+		local onScreen = y > -80 and y < h + 80
+		local vp = holder and holder:FindFirstChildOfClass("ViewportFrame")
+		if holder and onScreen and not vp then
+			viewport(e[2].Name, holder, nil, nil, e[2].Mutation)
+		elseif vp and not onScreen then
+			vp:Destroy()
 		end
 	end
-	table.sort(pool, function(x, y)
-		return x.Income > y.Income
-	end)
-	for i = 1, 10 do
+end
+invGrid:GetPropertyChangedSignal("CanvasPosition"):Connect(updateInventoryPreviews)
+
+function refreshInventory()
+	if not inventory.Visible then
+		invDirty = true
+		return
+	end
+	invDirty = false
+	for _, e in invSlots do
+		e[1]:Destroy()
+	end
+	table.clear(invSlots)
+	if not Data then
+		return
+	end
+	local q = search.Text:lower()
+	local pool = unplacedByIncome()
+	for i = 11, math.min(#pool, Config.MaxAnimals) do
 		local a = pool[i]
-		hotbarPets[i] = a
-		local held = a and Data.HeldId == a.Id
-		local slot = make("TextButton", { Size = UDim2.fromOffset(64, 64), LayoutOrder = i, Text = "", AutoButtonColor = false,
-			BackgroundColor3 = held and Color3.fromRGB(70, 60, 110) or C.Dark, BackgroundTransparency = a and 0.15 or 0.5, Parent = hotbar },
-			{ corner(10), stroke(held and 4 or 2, held and C.Gold or Color3.fromRGB(90, 90, 110)) })
-		label({ Text = tostring(i % 10), Size = UDim2.fromOffset(16, 16), Position = UDim2.new(0, 3, 1, -18), Parent = slot, StrokeSize = 1.5 })
-		if a then
-			viewport(a.Name, make("Frame", { Size = UDim2.fromScale(0.9, 0.78), Position = UDim2.fromScale(0.05, 0.16), BackgroundTransparency = 1, Parent = slot }), nil, nil, a.Mutation)
-			label({ Text = "$" .. Util.Format(a.Income) .. "/s", Size = UDim2.new(1, -4, 0, 14), Position = UDim2.fromOffset(2, 2), TextColor3 = C.Green, Parent = slot, StrokeSize = 1.5 })
-			slot.MouseEnter:Connect(function()
-				local tags = {}
-				if a.Mutation ~= "None" then
-					table.insert(tags, a.Mutation)
-				end
-				if a.Size ~= "Normal" then
-					table.insert(tags, a.Size)
-				end
-				table.insert(tags, "$" .. Util.Format(a.Income) .. "/s")
-				tipName.Text = a.Name
-				tipName.TextColor3 = rarityColor(a.Name)
-				tipInfo.Text = table.concat(tags, " | ") .. " - click your plot floor to place"
-				tip.Position = UDim2.new(0, slot.AbsolutePosition.X + 32, 1, -86)
-				tip.Visible = true
-			end)
-			slot.MouseLeave:Connect(function()
-				tip.Visible = false
-			end)
-			slot.Activated:Connect(function()
-				play("Click")
-				hold(a)
-			end)
+		local text = (a.Mutation .. " " .. a.Size .. " " .. a.Name):lower()
+		if q == "" or text:find(q, 1, true) then
+			table.insert(invSlots, { petSlot(invGrid, a, i, nil, true), a })
+		end
+	end
+	invEmpty.Visible = #invSlots == 0
+	invEmpty.Text = (#pool > 10 and q ~= "") and "No matches" or "No other items"
+	task.defer(updateInventoryPreviews) -- after the grid lays the slots out
+end
+search:GetPropertyChangedSignal("Text"):Connect(function()
+	invDirty = true
+	refreshInventory()
+end)
+
+local function toggleInventory()
+	inventory.Visible = not inventory.Visible
+	tip.Visible = false
+	if inventory.Visible then
+		play("Open")
+		bounce(inventory)
+		if invDirty then
+			refreshInventory()
 		end
 	end
 end
 
 UIS.InputBegan:Connect(function(input, processed)
 	if processed or busy or onPad then
+		return
+	end
+	if input.KeyCode == Enum.KeyCode.Backquote then
+		toggleInventory()
 		return
 	end
 	local idx = table.find(HOTBAR_KEYS, input.KeyCode)
