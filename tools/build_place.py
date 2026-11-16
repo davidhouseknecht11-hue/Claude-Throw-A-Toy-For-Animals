@@ -495,20 +495,20 @@ def terrace(g, x, z, sx, sz):
 
 
 for side in (-1, 1):  # side walls: low step, then a tall step behind
-    for k in range(5):
+    for k in range(-1, 7):  # runs past the front and back walls so the corners are closed
         zc = YARD_Z0 + 10 + k * 20
         terrace(base, side * (YARD_X + 6), zc, 12, 20)
         h = rnd.uniform(24, 32)
         base.add(part("Wall", (24, h, 20), (side * (YARD_X + 24), h / 2, zc), shade("96623C", rnd.uniform(0.9, 1.06))))
         base.add(part("WallTop", (24.4, 3, 20.4), (side * (YARD_X + 24), h + 1.5, zc), shade("78DC50", rnd.uniform(0.95, 1.05))))
-for k in range(-8, 8):  # back wall behind the plots
+for k in range(-10, 10):  # back wall behind the plots, out to the side walls
     xc = k * 20 + 10
     terrace(base, xc, YARD_Z1 + 6, 20, 12)
     h = rnd.uniform(24, 32)
     base.add(part("Wall", (20, h, 24), (xc, h / 2, YARD_Z1 + 24), shade("96623C", rnd.uniform(0.9, 1.06))))
     base.add(part("WallTop", (20.4, 3, 24.4), (xc, h + 1.5, YARD_Z1 + 24), shade("78DC50", rnd.uniform(0.95, 1.05))))
 for side in (-1, 1):  # front wall either side of the runway mouth
-    for k in range(6):
+    for k in range(8):  # out past the side walls
         xc = side * (44 + k * 20)
         h = rnd.uniform(22, 30)
         base.add(part("Wall", (20, h, 12), (xc, h / 2, -76), shade("96623C", rnd.uniform(0.9, 1.06))))
@@ -640,8 +640,8 @@ for px in (-120, -72, -24, 24, 72, 120):
                         rot=-t - math.pi / 2, collide=False, shadow=False, query=False))
         pm.add(part("TrainSpot", (2, 2, 1), L(16, 6.2, 31), "FFFFFF", rot=rot, collide=False, transparency=1))
         ROLL = (0, -1, 0, 1, 0, 0, 0, 0, 1)  # cylinder axis (X) stood upright
-        pm.add(part("PadRim", (0.3, 6.6, 6.6), L(16, 0.2, 38), "8A8A96", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
-        pm.add(part("UpgradePad", (0.4, 5.6, 5.6), L(16, 0.4, 38), "FFC93C", kind="neon", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
+        pm.add(part("PadRim", (0.3, 6.6, 6.6), L(16, 0.2, 41.5), "8A8A96", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
+        pm.add(part("UpgradePad", (0.4, 5.6, 5.6), L(16, 0.4, 41.5), "FFC93C", kind="neon", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
 
 # ---------------- CORRIDOR ----------------
 cor = mapm.add(Item("Model", "Corridor"))

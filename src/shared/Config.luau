@@ -188,7 +188,7 @@ end
 assert(math.abs(Config.FlightTime(4140) - 8.35) < 0.05, "FlightTime self-check failed")
 
 -- Monetization. Set these after creating the products on the Creator Dashboard (0 = hidden).
-Config.LuckProductId = 0 -- developer product "100x Luck": your next throw is a Super Lucky Throw
+Config.LuckProductId = 3732504698 -- developer product "100x Luck": your next throw is a Super Lucky Throw
 Config.LuckBoost = 100
 Config.LuckBoostSeconds = 15 * 60
 Config.LuckyRolls = 100 -- a Super Lucky Throw keeps the best of 100 rolls for mutation, size and the Secret check
