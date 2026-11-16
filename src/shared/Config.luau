@@ -167,6 +167,8 @@ Config.Mutations = {
 }
 
 Config.StartPower = 10
+Config.WalkSpeed = 24
+Config.PetScale = 2.5 -- plot pets: a Normal dog stands ~7 studs, bigger than the player like the reference
 Config.StartSlots = 6
 Config.MaxSlots = 30
 Config.MaxAnimals = 1000 -- plot + inventory slots; extra catches auto-sell
@@ -186,9 +188,32 @@ end
 assert(math.abs(Config.FlightTime(4140) - 8.35) < 0.05, "FlightTime self-check failed")
 
 -- Monetization. Set these after creating the products on the Creator Dashboard (0 = hidden).
-Config.LuckProductId = 0 -- developer product: 100x luck for 15 minutes
+Config.LuckProductId = 0 -- developer product "100x Luck": your next throw is a Super Lucky Throw
 Config.LuckBoost = 100
 Config.LuckBoostSeconds = 15 * 60
+Config.LuckyRolls = 100 -- a Super Lucky Throw keeps the best of 100 rolls for mutation, size and the Secret check
+
+-- chances ordered worst -> best; returns the chance of each outcome when the best of n independent rolls is kept
+function Config.BestOf(chances: { number }, n: number): { number }
+	local total = 0
+	for _, c in chances do
+		total += c
+	end
+	local out, tail = {}, 0
+	local prevTail = 0 -- P(best is strictly better than i)
+	for i = #chances, 1, -1 do
+		tail += chances[i] / total
+		local t = 1 - (1 - math.min(tail, 1)) ^ n
+		out[i] = t - prevTail
+		prevTail = t
+	end
+	return out
+end
+do -- self-check: best of 1 is unchanged; best of 100 on a 1% top tier is ~63.4%
+	local one = Config.BestOf({ 99, 1 }, 1)
+	local hundred = Config.BestOf({ 99, 1 }, 100)
+	assert(math.abs(one[2] - 0.01) < 1e-9 and math.abs(hundred[2] - 0.634) < 1e-3 and math.abs(hundred[1] + hundred[2] - 1) < 1e-9, "BestOf self-check failed")
+end
 
 -- Robux shop (layout from the Figma "Roblox shop" frame). Id = developer product / game pass id from the Creator
 -- Dashboard; 0 = button says "not for sale yet". Robux is display only: keep it equal to the dashboard price.

@@ -27,16 +27,16 @@ def quad(name, group, body, belly=None, *, L=1.6, W=0.9, H=0.8, hip=0.6, head=0.
     """Four-legged animal. Returns (brick, info) where info has the head centre / top for accessories."""
     a = Brick(name, group)
     bz = hip + H / 2
-    a.b((W, L, H), (0, 0, bz), body)
+    a.blob((0, 0, bz), (W * 0.55, L * 0.55, H * 0.56), body, slices=4)  # rounded barrel body
     if belly:
         a.b((W * 0.7, L * 0.7, 0.08), (0, 0.05, hip - 0.02), belly)
         a.b((W * 0.62, 0.08, H * 0.6), (0, L / 2 + 0.03, bz - H * 0.1), belly)
     legs4(a, hip, W * 0.33, L * 0.34, -L * 0.34, min(0.34, W * 0.36), leg or body, hoof)
     hy, hz = L / 2 + head * 0.25, hip + H + head * 0.2
-    a.b((head, head * 0.9, head * 0.85), (0, hy, hz), body, "head").pivot("head", (0, L / 2 - 0.1, hip + H * 0.75))
+    a.blob((0, hy, hz), (head * 0.55, head * 0.5, head * 0.47), body, "head", slices=3).pivot("head", (0, L / 2 - 0.1, hip + H * 0.75))
     front = hy + head * 0.45
     if snout:
-        a.b((head * 0.55, head * 0.42, head * 0.38), (0, front + head * 0.18, hz - head * 0.18), snout, "head")
+        a.blob((0, front + head * 0.16, hz - head * 0.18), (head * 0.3, head * 0.24, head * 0.21), snout, "head", slices=2)
         a.b((head * 0.18, 0.06, head * 0.12), (0, front + head * 0.4, hz - head * 0.06), INK, "head")
     eyes(a, head * 0.24, front, hz + head * 0.1, w=0.11, h=0.14, color=eye, glow=glow_eyes)
     _ears(a, ear, head * 0.3, hy - head * 0.05, hz + head * 0.5, body, inner)
@@ -75,27 +75,45 @@ def biped(name, group, body, belly=None, *, H=1.0, W=0.9, head=0.8, leg=0.45, ar
     return a, dict(hz=hz, head=head, top=hz + head * 0.43, front=front, H=H, W=W, leg=leg, bz=bz)
 
 
-def bird(name, group, body, wing, beak="FFC21C", *, s=1.0, belly=None, legs="FFC21C", tail=True, eye=INK, glow_eyes=False, neck=0.0):
-    """Bird / bat / flier: body, head, beak, flapping wings, tail, thin legs."""
+def bird(name, group, body, wing, beak="FFC21C", *, s=1.0, belly=None, legs="FFC21C", tail=True, eye=INK, glow_eyes=False, neck=0.0, legh=None, headc=None):
+    """Bird / bat: round body + head, tapered beak, folded feather wings (bats: open membranes), fanned tail, 3-toed feet."""
     a = Brick(name, group)
-    a.b((0.8 * s, 1.0 * s, 0.8 * s), (0, 0, 0.9 * s + 0.4), body)
+    spread = legs is None  # bats hang in the air with open wings; perching birds fold theirs
+    lh = legh if legh is not None else (0.5 * s if legs else 0.55 * s)
+    bz = lh + 0.48 * s
+    a.blob((0, 0, bz), (0.42 * s, 0.58 * s, 0.48 * s), body, slices=4)
     if belly:
-        a.b((0.6 * s, 0.1, 0.6 * s), (0, 0.51 * s, 0.85 * s + 0.4), belly)
-    hz = 1.55 * s + 0.4 + neck
+        a.blob((0, 0.2 * s, bz - 0.06 * s), (0.34 * s, 0.4 * s, 0.38 * s), belly, slices=3)
+    hy = 0.32 * s + (0.1 * s if neck else 0)
+    hz = bz + 0.52 * s + neck
     if neck:
-        a.b((0.3 * s, 0.3 * s, neck + 0.3), (0, 0.3 * s, 1.2 * s + 0.4 + neck / 2), body, "head")
-    a.b((0.62 * s, 0.6 * s, 0.56 * s), (0, 0.35 * s, hz), body, "head").pivot("head", (0, 0.25 * s, hz - 0.3 * s))
-    a.b((0.22 * s, 0.34 * s, 0.16 * s), (0, 0.8 * s, hz - 0.06 * s), beak, "head")
-    eyes(a, 0.16 * s, 0.66 * s, hz + 0.08 * s, w=0.1 * s, h=0.12 * s, color=eye, glow=glow_eyes)
-    a.m((1.0 * s, 0.5 * s, 0.12), (0.85 * s, -0.05, 0.95 * s + 0.4), wing, "wingR", rot=(0, -20, 0))
-    a.m((0.8 * s, 0.42 * s, 0.1), (1.6 * s, -0.1, 1.25 * s + 0.4), wing, "wingR", rot=(0, -32, 0))
-    a.pivot("wingR", (0.38 * s, 0, 1.0 * s + 0.4)).pivot("wingL", (-0.38 * s, 0, 1.0 * s + 0.4))
+        a.limb((0, 0.22 * s, bz + 0.25 * s), (0, hy, hz - 0.18 * s), 0.26 * s, 0.2 * s, body, "head")
+    a.blob((0, hy, hz), (0.3 * s, 0.3 * s, 0.28 * s), headc or body, "head", slices=3)
+    a.limb((0, hy + 0.24 * s, hz - 0.02 * s), (0, hy + 0.58 * s, hz - 0.13 * s), 0.2 * s, 0.08 * s, beak, "head")
+    if glow_eyes or eye != INK:
+        eyes(a, 0.13 * s, hy + 0.27 * s, hz + 0.07 * s, w=0.1 * s, h=0.12 * s, color=eye, glow=glow_eyes)
+    else:
+        side_eyes(a, 0.29 * s, hy + 0.08 * s, hz + 0.06 * s, s=0.12 * s)
+    a.pivot("head", (0, hy - 0.12 * s, hz - 0.22 * s))
+    if spread:
+        a.m((2.1 * s, 0.08, 0.08), (1.1 * s, 0.22 * s, bz + 0.32 * s), body, "wingR", rot=(0, -18, 0))
+        a.m((1.1 * s, 0.6 * s, 0.07), (0.72 * s, -0.02, bz + 0.12 * s), wing, "wingR", rot=(0, -12, 0))
+        a.m((0.95 * s, 0.42 * s, 0.06), (1.62 * s, 0.02, bz + 0.38 * s), wing, "wingR", rot=(0, -22, 0))
+    else:
+        a.m((0.12 * s, 0.82 * s, 0.5 * s), (0.42 * s, -0.12 * s, bz + 0.04 * s), wing, "wingR", rot=(-12, 0, 0))
+        a.m((0.1 * s, 0.62 * s, 0.24 * s), (0.4 * s, -0.66 * s, bz - 0.14 * s), wing, "wingR", rot=(-20, 0, 0))
+    a.pivot("wingR", (0.36 * s, 0, bz + 0.3 * s)).pivot("wingL", (-0.36 * s, 0, bz + 0.3 * s))
     if tail:
-        a.b((0.4 * s, 0.8 * s, 0.1), (0, -0.85 * s, 0.75 * s + 0.4), wing, "tail", rot=(-20, 0, 0)).pivot("tail", (0, -0.45 * s, 0.85 * s + 0.4))
+        for k in (-1, 0, 1):
+            a.b((0.17 * s, 0.6 * s, 0.07), (k * 0.14 * s, -0.86 * s, bz - 0.05 * s), wing, "tail", rot=(-20, 0, k * 12))
+        a.pivot("tail", (0, -0.55 * s, bz))
     if legs:
-        a.m((0.08, 0.08, 0.5 + 0.4 * s), (0.16 * s, 0.05, (0.5 + 0.4 * s) / 2), legs, "legFR")
-        a.m((0.22, 0.3, 0.05), (0.16 * s, 0.15, 0.025), legs, "legFR").pivot("legFR", (0.16 * s, 0.05, 0.9)).pivot("legFL", (-0.16 * s, 0.05, 0.9))
-    return a, dict(hz=hz, top=hz + 0.28 * s, s=s)
+        a.m((0.08 * s, 0.08 * s, lh), (0.15 * s, 0.02, lh / 2), legs, "legFR")
+        for ang in (-28, 0, 28):
+            a.m((0.06 * s, 0.26 * s, 0.05), (0.15 * s + _w2.sin(_w2.radians(-ang)) * 0.12 * s, 0.13 * s, 0.025), legs, "legFR", rot=(0, 0, ang))
+        a.m((0.06 * s, 0.14 * s, 0.05), (0.15 * s, -0.06 * s, 0.025), legs, "legFR")
+        a.pivot("legFR", (0.15 * s, 0.02, lh)).pivot("legFL", (-0.15 * s, 0.02, lh))
+    return a, dict(hz=hz, top=hz + 0.28 * s, s=s, hy=hy)
 
 
 def fish(name, group, body, fin, *, L=1.8, H=0.9, W=0.6, z=1.4, belly=None, eye=INK, glow_eyes=False, dorsal=True, tailw=1.0):
@@ -160,20 +178,69 @@ def multi_tail(a, n, c, tip, spread=110, base=(0, -0.7, 1.0), length=0.9):
 
 # ====================================================================== REGULAR ANIMALS (12 zones)
 # Dinosaur Island
-a, i = biped("Raptor", "World2", "6FA84A", "D8E8A0", H=0.8, W=0.7, head=0.7, leg=0.55, ear=None, tail=True)
-a.b((0.5, 0.5, 0.3), (0, 0.55, i["hz"] - 0.1), "6FA84A", "head").b((0.4, 0.1, 0.06), (0, 0.8, i["hz"] - 0.2), "FFFFFF", "head")
-for k in range(3):
-    a.b((0.1, 0.25, 0.14), (0, -0.2 - k * 0.25, 0.55 + 0.85), "D8582A")
+a = Brick("Raptor", "World2")  # sleek, horizontal, long stiff tail, sickle claws
+G, B, R = "6FA84A", "D8E8A0", "D8582A"
+a.m((0.26, 0.42, 0.5), (0.2, -0.05, 0.92), G, "legFR").m((0.15, 0.15, 0.62), (0.2, 0.05, 0.4), G, "legFR", rot=(-14, 0, 0))
+a.m((0.2, 0.42, 0.1), (0.2, 0.16, 0.05), B, "legFR").m((0.06, 0.12, 0.22), (0.2, 0.3, 0.17), "FFFFFF", "legFR", rot=(35, 0, 0))
+a.pivot("legFR", (0.2, -0.05, 1.12)).pivot("legFL", (-0.2, -0.05, 1.12))
+a.blob((0, 0.05, 1.25), (0.3, 0.62, 0.3), G, slices=3).b((0.42, 0.8, 0.1), (0, 0.12, 0.97), B)
+for k in range(4):
+    a.b((0.5, 0.1, 0.1), (0, 0.4 - k * 0.24, 1.55 - k * 0.03), R)
+a.b((0.3, 0.42, 0.55), (0, 0.62, 1.58), G, "head", rot=(-28, 0, 0))
+a.blob((0, 0.98, 1.86), (0.22, 0.4, 0.19), G, "head", slices=3).b((0.36, 0.56, 0.12), (0, 1.02, 1.63), B, "head")
+a.m((0.05, 0.05, 0.08), (0.12, 1.3, 1.62), "FFFFFF", "head").m((0.05, 0.05, 0.08), (0.12, 1.15, 1.62), "FFFFFF", "head")
+side_eyes(a, 0.21, 0.88, 1.95, s=0.12)
+a.b((0.42, 0.08, 0.06), (0, 0.75, 2.05), R, "head").pivot("head", (0, 0.55, 1.4))
+a.m((0.09, 0.36, 0.09), (0.3, 0.6, 1.1), G, "armR", rot=(55, 0, 0)).m((0.05, 0.14, 0.05), (0.3, 0.78, 0.95), "FFFFFF", "armR")
+a.pivot("armR", (0.28, 0.5, 1.25)).pivot("armL", (-0.28, 0.5, 1.25))
+a.b((0.34, 0.95, 0.32), (0, -0.9, 1.32), G, "tail", rot=(-4, 0, 0)).b((0.2, 1.0, 0.18), (0, -1.85, 1.38), G, "tail")
+a.b((0.22, 0.1, 0.1), (0, -1.0, 1.5), R, "tail").b((0.14, 0.1, 0.08), (0, -1.6, 1.48), R, "tail").pivot("tail", (0, -0.45, 1.3))
 a, i = quad("Triceratops", "World2", "5A8AC8", "B8D0F0", L=1.9, W=1.1, H=0.95, hip=0.55, head=0.9, ear=None, tail="long")
 a.b((1.5, 0.12, 0.95), (0, i["hy"] - 0.25, i["hz"] + 0.35), "E0C080", "head", rot=(-25, 0, 0))
 horn(a, 0.25, i["front"], i["hz"] + 0.3, "FFF6EA", 0.6, 40)
 a.b((0.14, 0.14, 0.35), (0, i["front"] + 0.15, i["hz"] - 0.05), "FFF6EA", "head", rot=(40, 0, 0))
-a, i = bird("Pterodactyl", "World2", "B87A4A", "8A5A32", "E0B060", s=1.0, legs="8A5A32", tail=False)
-a.b((0.18, 0.7, 0.18), (0, -0.05, i["hz"] + 0.25), "B87A4A", "head", rot=(30, 0, 0))
-a, i = biped("T-Rex", "World2", "3E8A3A", "C8E0A0", H=1.4, W=1.2, head=1.2, leg=0.75, ear=None, tail=True, arms=True)
-a.b((1.0, 0.7, 0.5), (0, 0.85, i["hz"] - 0.25), "3E8A3A", "head")
-for x in (-0.3, -0.1, 0.1, 0.3):
-    a.b((0.08, 0.08, 0.14), (x, 1.15, i["hz"] - 0.42), "FFFFFF", "head")
+a = Brick("Pterodactyl", "World2")  # skinny body, long beak + back crest, huge membrane wings
+P, W, K = "B87A4A", "8A5A32", "E0B060"
+a.blob((0, 0, 1.3), (0.22, 0.42, 0.22), P, slices=3).b((0.3, 0.5, 0.08), (0, 0.05, 1.08), "D8B088")
+a.b((0.2, 0.32, 0.42), (0, 0.42, 1.58), P, "head", rot=(-32, 0, 0))
+a.blob((0, 0.66, 1.85), (0.17, 0.26, 0.16), P, "head", slices=3).b((0.15, 0.95, 0.12), (0, 1.3, 1.8), K, "head", rot=(-4, 0, 0))
+a.b((0.12, 0.6, 0.06), (0, 1.28, 1.72), K, "head", rot=(-8, 0, 0))
+a.b((0.07, 0.8, 0.32), (0, 0.12, 2.1), "D8582A", "head", rot=(-22, 0, 0))
+side_eyes(a, 0.16, 0.75, 1.9, s=0.1)
+a.pivot("head", (0, 0.35, 1.45))
+a.m((2.7, 0.09, 0.09), (1.55, 0.3, 1.47), P, "wingR", rot=(0, -10, 0))  # arm + long finger
+a.m((1.25, 0.62, 0.05), (0.82, 0.0, 1.38), W, "wingR", rot=(0, -8, 0))
+a.m((1.25, 0.46, 0.05), (2.02, 0.08, 1.56), W, "wingR", rot=(0, -12, 0))
+a.m((0.7, 0.24, 0.05), (2.88, 0.18, 1.7), W, "wingR", rot=(0, -15, 0))
+a.m((0.06, 0.14, 0.06), (1.1, 0.4, 1.53), "F0E0C0", "wingR")
+a.pivot("wingR", (0.2, 0, 1.35)).pivot("wingL", (-0.2, 0, 1.35))
+a.m((0.07, 0.07, 1.1), (0.12, -0.15, 0.55), P, "legFR").m((0.18, 0.24, 0.05), (0.12, -0.05, 0.025), K, "legFR")
+a.pivot("legFR", (0.12, -0.15, 1.1)).pivot("legFL", (-0.12, -0.15, 1.1))
+a.b((0.08, 0.35, 0.08), (0, -0.52, 1.28), P, "tail").pivot("tail", (0, -0.35, 1.3))
+a = Brick("T-Rex", "World2")  # big jaw, tiny arms, thick legs, horizontal body balanced by a heavy tail
+G, B = "3E8A3A", "C8E0A0"
+a.m((0.5, 0.75, 0.62), (0.42, -0.1, 1.15), G, "legFR").m((0.38, 0.42, 0.75), (0.42, 0.0, 0.48), G, "legFR", rot=(-10, 0, 0))
+a.m((0.48, 0.75, 0.16), (0.42, 0.18, 0.08), B, "legFR")
+for t in (-0.12, 0.0, 0.12):
+    a.m((0.08, 0.14, 0.1), (0.42 + t, 0.6, 0.06), "FFFFFF", "legFR")
+a.pivot("legFR", (0.42, -0.1, 1.4)).pivot("legFL", (-0.42, -0.1, 1.4))
+a.blob((0, 0.05, 1.65), (0.6, 1.0, 0.6), G, slices=4).b((0.8, 1.3, 0.12), (0, 0.2, 1.12), B, rot=(-12, 0, 0))
+for k in range(5):
+    a.b((0.3, 0.16, 0.12), (0, 0.6 - k * 0.32, 2.24 - k * 0.04), "2E6A2C")
+a.b((0.78, 0.6, 0.85), (0, 0.98, 2.15), G, "head", rot=(-20, 0, 0))
+a.b((0.98, 1.3, 0.62), (0, 1.62, 2.55), G, "head").b((0.9, 1.15, 0.3), (0, 1.56, 2.06), "2E6A2C", "head", rot=(8, 0, 0))
+a.b((0.84, 0.1, 0.24), (0, 2.27, 2.33), "A0302A", "head")
+for x in (-0.33, -0.11, 0.11, 0.33):
+    a.b((0.09, 0.09, 0.15), (x, 2.2, 2.2), "FFFFFF", "head")
+a.m((0.09, 0.9, 0.12), (0.43, 1.7, 2.2), "FFFFFF", "head")
+a.m((0.1, 0.1, 0.06), (0.22, 2.26, 2.75), "1A1A1A", "head")
+side_eyes(a, 0.49, 1.35, 2.68, s=0.17)
+a.m((0.42, 0.14, 0.1), (0.3, 1.38, 2.88), "2E6A2C", "head", rot=(0, 0, -12))
+a.pivot("head", (0, 0.9, 2.2))
+a.m((0.14, 0.42, 0.14), (0.5, 1.05, 1.55), G, "armR", rot=(40, 0, 0)).m((0.05, 0.12, 0.05), (0.5, 1.25, 1.38), "FFFFFF", "armR")
+a.pivot("armR", (0.48, 0.95, 1.75)).pivot("armL", (-0.48, 0.95, 1.75))
+a.b((0.85, 1.1, 0.78), (0, -1.35, 1.6), G, "tail", rot=(6, 0, 0)).b((0.58, 1.05, 0.52), (0, -2.35, 1.45), G, "tail", rot=(10, 0, 0))
+a.b((0.32, 0.85, 0.3), (0, -3.2, 1.3), G, "tail", rot=(12, 0, 0)).pivot("tail", (0, -0.85, 1.65))
 # Lost Desert
 a, i = biped("Meerkat", "World2", "C8A06A", "F0DCB0", H=1.1, W=0.6, head=0.55, leg=0.4, ear="round", tail=True)
 a.b((0.2, 0.25, 0.25), (0, 0.38, i["hz"] - 0.05), "8A6A40", "head")
@@ -195,21 +262,28 @@ a, i = quad("Red Panda", "World2", "C8502A", "2A1A14", L=1.4, W=0.8, H=0.65, hip
 for k in range(3):
     a.b((0.38, 0.12, 0.38), (0, -1.0 - k * 0.22, 0.75 + k * 0.08), "FFF6EA", "tail", rot=(-25, 0, 0))
 a.m((0.2, 0.05, 0.16), (0.22, i["front"] + 0.01, i["hz"] - 0.12), "FFF6EA", "head")
-a, i = bird("Crane", "World2", "FFFFFF", "FFFFFF", "3A3A42", s=1.0, legs="3A3A42", neck=0.7)
+a, i = bird("Crane", "World2", "FFFFFF", "2A2A30", "3A3A42", s=1.0, legs="3A3A42", neck=0.7, legh=1.3)
 a.b((0.28, 0.28, 0.08), (0, 0.35, i["hz"] + 0.3), "E23B3B", "head")
-a.m((0.5, 0.3, 0.12), (1.7, -0.2, 1.65), "1C1C22", "wingR", rot=(0, -32, 0))
 a = variant("Fox", "Sakura Fox", {"F07A26": "FF9AC8", "FFF6EA": "FFF0F6", "2A1D18": "C85A8A"})
 a.group = "World2"
 stars(a, ((0.41, 0.2, 1.1), (-0.41, -0.3, 1.2)), "FFD0E8", 0.12)
 # Lost Atlantis
-a = Brick("Seahorse", "World2")
+a = Brick("Seahorse", "World2")  # S-curve: crowned head, tube snout, ridged pot belly, curled tail
 O, Y = "FF9A2A", "FFE36A"
-for k, (y, z, s) in enumerate(((0, 1.8, 0.6), (-0.1, 1.3, 0.55), (-0.05, 0.85, 0.48), (0.1, 0.5, 0.38), (0.25, 0.3, 0.3))):
-    a.b((s, s, s * 1.1), (0, y, z), O if k % 2 == 0 else Y, "tail" if k >= 3 else "body")
-a.b((0.4, 0.15, 0.3), (0, 0.25, 0.15), O, "tail", rot=(0, 0, 0)).pivot("tail", (0, 0, 0.8))
-a.b((0.5, 0.55, 0.5), (0, 0.15, 2.3), O, "head").b((0.2, 0.5, 0.2), (0, 0.55, 2.22), Y, "head").pivot("head", (0, 0, 2.05))
-eyes(a, 0.15, 0.4, 2.38, w=0.1, h=0.12)
-a.b((0.08, 0.5, 0.5), (0, -0.35, 1.6), Y, kind="neon")
+a.blob((0, 0.12, 2.3), (0.26, 0.27, 0.26), O, "head", slices=3).b((0.18, 0.62, 0.18), (0, 0.62, 2.18), Y, "head", rot=(-8, 0, 0))
+a.b((0.22, 0.1, 0.22), (0, 0.95, 2.13), O, "head")
+for k, x in enumerate((-0.12, 0.0, 0.12)):
+    a.b((0.08, 0.08, 0.22), (x, 0.0, 2.62 + (0.05 if k == 1 else 0)), Y, "head")
+side_eyes(a, 0.25, 0.22, 2.36, s=0.13)
+a.pivot("head", (0, 0.0, 2.05))
+a.b((0.42, 0.42, 0.45), (0, -0.08, 1.95), O, rot=(22, 0, 0))
+a.blob((0, 0.06, 1.45), (0.33, 0.38, 0.45), O, slices=4).b((0.44, 0.1, 0.7), (0, 0.43, 1.45), Y)
+for k in range(3):
+    a.b((0.6, 0.66, 0.06), (0, 0.06, 1.25 + k * 0.2), Y)
+a.b((0.06, 0.4, 0.5), (0, -0.36, 1.6), Y, "wingR", kind="neon").pivot("wingR", (0, -0.3, 1.6))
+for k, (y, z, r) in enumerate(((-0.05, 0.92, 0.42), (-0.15, 0.62, 0.34), (-0.05, 0.38, 0.28), (0.15, 0.3, 0.22), (0.3, 0.42, 0.18), (0.25, 0.58, 0.14))):
+    a.b((r, r, r), (0, y, z), O if k % 2 == 0 else Y, "tail")
+a.pivot("tail", (0, 0.0, 1.1))
 a, i = fish("Dolphin", "World2", "6A9ACA", "4A7AAA", L=2.2, H=0.8, W=0.7, z=1.3, belly="E8F0FF")
 a.b((0.25, 0.5, 0.2), (0, 1.75, 1.15), "6A9ACA", "head")
 a, i = fish("Shark", "World2", "7A8A9A", "5A6A7A", L=2.4, H=1.0, W=0.8, z=1.4, belly="F0F4F8", tailw=1.4)
@@ -222,9 +296,8 @@ a.group = "World2"
 a.m((0.7, 0.8, 0.06), (0.75, 0, 0.45), "C8A880", "armR", rot=(0, -10, 0)).pivot("armR", (0.5, 0, 0.5)).pivot("armL", (-0.5, 0, 0.5))
 a, i = bird("Owl", "World2", "8A6A4A", "6A4A32", "FFC21C", s=1.0, belly="E0C8A0", legs="FFC21C")
 a.m((0.14, 0.14, 0.3), (0.22, 0.3, i["hz"] + 0.38), "6A4A32", "head", rot=(0, -20, 0))
-a.m((0.22, 0.06, 0.22), (0.15, 0.66, i["hz"] + 0.08), "FFD23C", "head")
-a, i = bird("Eagle", "World2", "6A4A2A", "4A321C", "FFC21C", s=1.15, belly="8A6A4A", legs="FFC21C")
-a.b((0.66, 0.62, 0.3), (0, 0.4, i["hz"] + 0.18), "FFFFFF", "head")
+a.m((0.22, 0.06, 0.22), (0.14, 0.64, i["hz"] + 0.06), "FFD23C", "head").m((0.11, 0.07, 0.11), (0.14, 0.66, i["hz"] + 0.06), INK, "head")
+a, i = bird("Eagle", "World2", "6A4A2A", "4A321C", "FFC21C", s=1.15, legs="FFC21C", headc="FFFFFF")
 a = variant("Zebra", "Pegasus", {"222228": "F0F4FF", "3A3A42": "C8D0E0"})
 a.group = "World2"
 wings(a, 0.52, 0.2, 1.8, "FFFFFF", "C8E8FF", 1.3)
@@ -254,11 +327,21 @@ for k in range(3):
 a.pivot("legBR", (0.55, 0, 0.4)).pivot("legBL", (-0.55, 0, 0.4)).pivot("legFR", (0.55, 0.2, 0.4)).pivot("legFL", (-0.55, 0.2, 0.4))
 a.m((0.4, 0.5, 0.35), (0.85, 0.65, 0.6), "FF5A2A", "armR").m((0.18, 0.3, 0.12), (0.92, 0.95, 0.7), "C8301C", "armR")
 a.pivot("armR", (0.6, 0.4, 0.55)).pivot("armL", (-0.6, 0.4, 0.55))
-a, i = bird("Flamingo", "World2", "FF8AB8", "FF6AA0", "1C1C22", s=1.0, legs="FF6AA0", neck=0.8)
+a, i = bird("Flamingo", "World2", "FF8AB8", "FF6AA0", "1C1C22", s=1.0, legs="FF6AA0", neck=0.8, legh=1.4)
 a, i = bird("Toucan", "World2", "1C1C22", "2A2A30", "FF9A2A", s=1.0, belly="FFE36A", legs="4CB4FF")
 a.b((0.28, 0.6, 0.3), (0, 0.95, i["hz"] - 0.02), "FF9A2A", "head").b((0.3, 0.2, 0.32), (0, 1.25, i["hz"] - 0.02), "E8401C", "head")
-a, i = biped("Sea Lion", "World2", "6A5A4A", "8A7A6A", H=1.0, W=0.9, head=0.7, leg=0.2, ear=None, arms=True)
-a.b((0.4, 0.3, 0.25), (0, 0.45, i["hz"] - 0.15), "8A7A6A", "head").m((0.2, 0.05, 0.05), (0.18, 0.62, i["hz"] - 0.1), "E8E0D0", "head")
+a = Brick("Sea Lion", "World2")  # propped up on front flippers, sleek tapering body, whiskered snout
+S, L = "6A5A4A", "8A7A6A"
+a.blob((0, 0.2, 0.8), (0.45, 0.45, 0.55), S, slices=4).b((0.6, 0.1, 0.75), (0, 0.6, 0.85), L, rot=(-18, 0, 0))
+a.blob((0, -0.6, 0.3), (0.38, 0.55, 0.28), S, slices=3).b((0.5, 0.6, 0.4), (0, -1.15, 0.22), S, "tail")
+a.m((0.42, 0.5, 0.07), (0.25, -1.55, 0.05), S, "tail", rot=(0, 0, 25)).pivot("tail", (0, -0.85, 0.3))
+a.blob((0, 0.48, 1.5), (0.31, 0.33, 0.29), S, "head", slices=3).b((0.42, 0.34, 0.32), (0, 0.86, 1.4), L, "head")
+a.b((0.16, 0.06, 0.1), (0, 1.04, 1.5), "1A1A1A", "head")
+a.m((0.26, 0.03, 0.03), (0.28, 1.0, 1.36), "E8E0D0", "head", rot=(0, 0, 10)).m((0.26, 0.03, 0.03), (0.28, 1.0, 1.3), "E8E0D0", "head", rot=(0, 0, -10))
+eyes(a, 0.15, 0.79, 1.62, w=0.12, h=0.14)
+a.pivot("head", (0, 0.35, 1.25))
+a.m((0.14, 0.5, 0.62), (0.45, 0.45, 0.3), S, "legFR", rot=(10, 0, -18)).m((0.3, 0.5, 0.06), (0.52, 0.62, 0.03), L, "legFR")
+a.pivot("legFR", (0.4, 0.35, 0.65)).pivot("legFL", (-0.4, 0.35, 0.65))
 # Toy Factory
 a = variant("Hamster", "Wind-Up Mouse", {"E8B465": "9AA4B2", "FFF3E0": "C8D0DC", "D4893A": "6A7080", "F7B6C8": "FF8AB8"})
 a.group = "World2"
@@ -298,8 +381,7 @@ a, i = quad("Celestial Deer", "World2", "F0E8FF", "FFFFFF", L=1.6, W=0.75, H=0.7
 for x in (0.2, -0.2):
     a.b((0.08, 0.08, 0.6), (x, i["hy"], i["top"] + 0.3), "FFE45C", "head", kind="neon").b((0.3, 0.08, 0.08), (x * 1.6, i["hy"], i["top"] + 0.45), "FFE45C", "head", kind="neon")
 stars(a, ((0.38, 0.2, 1.4), (-0.38, -0.3, 1.5), (0.38, -0.5, 1.2)), "C8D8FF", 0.1)
-a, i = bird("Golden Eagle", "World2", "D8A030", "B8801C", "FFFFFF", s=1.2, belly="F0C860", legs="FFC21C")
-a.b((0.66, 0.62, 0.3), (0, 0.42, i["hz"] + 0.2), "FFE45C", "head", kind="neon")
+a, i = bird("Golden Eagle", "World2", "D8A030", "B8801C", "FFC21C", s=1.2, belly="F0C860", legs="FFC21C", headc="FFE45C")
 a = variant("Lion", "Angelic Lion", {"E8B05A": "FFF8E8", "F5DDB0": "FFFFFF", "A65A1E": "FFE45C", "C8742C": "FFD23C", "5C2E14": "FFC21C"})
 a.group = "World2"
 wings(a, 0.65, 0.0, 1.9, "FFFFFF", "FFF2C2", 1.5)
@@ -324,8 +406,8 @@ def S(model, name):  # mark a Secret
 # Dinosaur Island
 S(variant("Dragon", "Ancient Dragon", {"7B3FE4": "8A6A3A", "4A1FA0": "5A4020", "C9ADFF": "D8B880", "A985FF": "B89060", "neon:5CFF9D": "FFC21C"}), "")
 a = S(variant("T-Rex", "Skeleton Rex", {"3E8A3A": "F0ECE0", "C8E0A0": "C8C0A8"}), "")
-for k in range(4):
-    a.b((1.24, 0.1, 0.1), (0, 0, 1.0 + k * 0.3), "8A8270")
+for k in range(5):
+    a.b((1.2, 0.12, 0.12), (0, 0.55 - k * 0.3, 1.65 + k * 0.06), "8A8270", rot=(-12, 0, 0))
 a, i = quad("Earth Turtle", "Secret2", "6A9A4A", "C8B880", L=1.5, W=1.3, H=0.4, hip=0.4, head=0.6, ear=None, tail="stub", leg="6A9A4A")
 a.b((1.5, 1.7, 0.7), (0, -0.05, 1.15), "7A5A32").b((1.1, 1.3, 0.3), (0, -0.05, 1.6), "8A6A3A")
 for x, y in ((0.3, 0.2), (-0.35, -0.3), (0.1, -0.5)):

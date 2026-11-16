@@ -59,6 +59,9 @@ def cube_mesh(name, sx, sy, sz):
 
 
 models = [m for m in brick.MODELS if not ONLY or m.group in ONLY]
+for m in models:  # animals read as rounded, real-life shapes; toys / icons / FX props stay crisp blocks
+    if m.group not in ("Toys", "Icons", "FX", "Mutations"):
+        brick.roundify(m)
 export = {}
 for m in models:
     root = bpy.data.objects.new(m.name, None)
@@ -129,6 +132,9 @@ for g in list(groups):  # big groups review in sheets of 8 so each model is larg
         del groups[g]
         for k in range(0, len(names), 8):
             groups[f"{g}_{k // 8}"] = names[k:k + 8]
+PICK = sum([a[6:].split(",") for a in args if a.startswith("names=")], [])
+if PICK:  # close-up review of specific models: names=Owl,Eagle
+    groups = {"pick": PICK}
 for g, names in groups.items():
     roots = [bpy.data.objects[n] for n in names]
     for ob in bpy.data.objects:

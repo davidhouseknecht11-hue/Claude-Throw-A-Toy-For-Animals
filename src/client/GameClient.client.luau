@@ -331,11 +331,30 @@ player:GetAttributeChangedSignal("Power"):Connect(function()
 	updateStats()
 end)
 
--- luck boost button (top right)
-local luckBtn = button({ Size = UDim2.fromOffset(190, 64), Position = UDim2.new(1, -206, 0, 70), Color = C.Purple, Text = "🍀 100x LUCK", Visible = Config.LuckProductId ~= 0, Parent = hud }, function()
-	Remotes.Request:InvokeServer("BuyLuck")
+-- 100x LUCK card (top right): buy a Super Lucky Throw; DETAILS compares normal vs lucky chances
+local luckBtn = button({ Size = UDim2.fromOffset(236, 72), Position = UDim2.new(1, -250, 0, 64), Color = C.Purple, Text = "", Parent = hud }, function()
+	local _, msg = Remotes.Request:InvokeServer("BuyLuck")
+	if msg then
+		toast(msg, "warn")
+	end
 end)
-local luckTimer = label({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, 4), TextColor3 = C.Gold, Parent = luckBtn })
+do
+	local ic = make("Frame", { Size = UDim2.fromOffset(78, 78), Position = UDim2.fromOffset(-14, -12), BackgroundTransparency = 1, Parent = luckBtn })
+	viewport("Icon Clover", ic, false, true)
+	label({ Text = "100x LUCK", Size = UDim2.new(1, -70, 1, 0), Position = UDim2.fromOffset(64, 0), Parent = luckBtn, StrokeSize = 3 })
+end
+local priceBg = make("Frame", { Size = UDim2.fromOffset(96, 32), Position = UDim2.new(1, -250 + 118 - 48, 0, 64 + 78), BackgroundColor3 = Color3.fromRGB(40, 36, 60), Parent = hud }, { corner(16), stroke(2) })
+local luckPrice = label({ Text = "", Size = UDim2.fromScale(1, 1), Parent = priceBg, StrokeSize = 2 })
+local luckTimer = label({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 0, -24), TextColor3 = C.Gold, Parent = luckBtn })
+task.spawn(function()
+	luckPrice.Text = "?"
+	if Config.LuckProductId ~= 0 then
+		local ok, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(Config.LuckProductId, Enum.InfoType.Product) end)
+		if ok and info and info.PriceInRobux then
+			luckPrice.Text = "\u{E002} " .. tostring(info.PriceInRobux)
+		end
+	end
+end)
 
 -- ===================== PANELS =====================
 local openPanel: Frame? = nil
@@ -371,6 +390,65 @@ local function toggle(f: Frame, onOpen: (() -> ())?)
 		end
 	end
 end
+
+-- ---------- SUPER LUCKY THROW details: normal (1 roll) vs lucky (best of 100) ----------
+local luckFrame, luckBody = panel("🍀 Super Lucky Throw", C.Green)
+do
+	local list = make("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -64), BackgroundTransparency = 1, ScrollBarThickness = 6, CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = luckBody }, { make("UIListLayout", { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder }) })
+	local n = 0
+	local function row(h: number, a: string, b: string?, c: string?, color: Color3?, small: boolean?)
+		n += 1
+		local r = make("Frame", { Size = UDim2.new(1, -10, 0, h), BackgroundColor3 = Color3.fromRGB(255, 255, 255), BackgroundTransparency = b and 0.93 or 1, LayoutOrder = n, Parent = list }, { corner(8) })
+		label({ Text = a, Size = UDim2.new(b and 0.56 or 1, -10, 1, 0), Position = UDim2.fromOffset(10, 0), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = color or C.White, TextWrapped = not b, TextScaled = not small and true or false, TextSize = 15, Parent = r, StrokeSize = 1.5 })
+		if b then
+			label({ Text = b, Size = UDim2.new(0.2, 0, 0.8, 0), Position = UDim2.new(0.56, 0, 0.1, 0), TextXAlignment = Enum.TextXAlignment.Right, Parent = r, StrokeSize = 1.5 })
+			label({ Text = c or "", Size = UDim2.new(0.22, 0, 0.8, 0), Position = UDim2.new(0.77, 0, 0.1, 0), TextXAlignment = Enum.TextXAlignment.Right, TextColor3 = C.Gold, Parent = r, StrokeSize = 1.5 })
+		end
+	end
+	local function pct(x: number): string
+		x *= 100
+		return x >= 0.1 and string.format("%.3f%%", x) or (x >= 1e-6 and string.format("%.6f%%", x) or string.format("%.2g%%", x))
+	end
+	local function section(title: string, list_, name, weight, colorOf)
+		row(30, "<b>" .. title .. "</b>", nil, nil, C.Gold)
+		local w = {}
+		for i, it in list_ do
+			w[i] = weight(it)
+		end
+		local one, best = Config.BestOf(w, 1), Config.BestOf(w, Config.LuckyRolls)
+		for i, it in list_ do
+			row(30, name(it), pct(one[i]), pct(best[i]), colorOf(it))
+		end
+	end
+	row(54, "A Super Lucky Throw rolls your mutation, size and the Secret check " .. Config.LuckyRolls
+		.. " times and keeps the best. Which animal comes is decided as on any throw.", nil, nil, nil, true)
+	row(40, "", "Normal throw (1 roll)", "Lucky throw (best of " .. Config.LuckyRolls .. ")")
+	section("MUTATION", Config.Mutations, function(m)
+		return m.Name == "None" and "No mutation" or string.format("%s (x%g money)", m.Name, m.Mult)
+	end, function(m)
+		return m.Chance
+	end, function(m)
+		return m.Color or C.White
+	end)
+	section("SIZE", Config.Sizes, function(s)
+		return string.format("%s (x%g)", s.Name == "Normal" and "Normal size" or s.Name:upper(), s.Mult)
+	end, function(s)
+		return s.Chance
+	end, function()
+		return C.White
+	end)
+	local p1 = Config.SecretChance
+	row(30, "<b>SECRET</b>", nil, nil, C.Gold)
+	row(30, "Each Secret pet", pct(p1), pct(1 - (1 - p1) ^ Config.LuckyRolls), Config.Rarities[Config.RarityIndex.Secret].Color)
+	button({ Size = UDim2.new(0.4, 0, 0, 50), Position = UDim2.new(0.3, 0, 1, -54), Text = "GOT IT!", Color = C.Green, Parent = luckBody }, function()
+		luckFrame.Visible = false
+		openPanel = nil
+	end)
+end
+button({ Size = UDim2.fromOffset(110, 30), Position = UDim2.new(1, -250 + 118 - 55, 0, 64 + 116), Text = "DETAILS", Color = C.Blue, Parent = hud }, function()
+	toggle(luckFrame)
+end)
 
 -- ---------- SHOP ----------
 local shopFrame, shopBody = panel("🧸 Toy Shop", C.Pink)
@@ -1128,9 +1206,8 @@ task.spawn(function()
 	while true do
 		task.wait(1)
 		if Data then
-			local left = (Data.LuckUntil or 0) - (Data.ServerTime or 0)
 			Data.ServerTime = (Data.ServerTime or 0) + 1
-			luckTimer.Text = left > 0 and ("ACTIVE " .. Util.Time(left)) or ""
+			luckTimer.Text = (Data.LuckyThrows or 0) > 0 and string.format("READY x%d", Data.LuckyThrows) or ""
 			if shopFrame.Visible then
 				Data.Cash = player:GetAttribute("Cash") or Data.Cash
 				refreshShop()
@@ -1897,7 +1974,7 @@ local function runThrow(r)
 			toy:PivotTo(CFrame.new(pos) * CFrame.Angles(a * 25, a * 14, 0))
 		end
 		local travelled = math.max(0, (Config.Map.CorridorStartZ - pos.Z))
-		local luck = Config.LuckAt(travelled) * toyInfo.Luck * (r.Boosted and Config.LuckBoost or 1)
+		local luck = Config.LuckAt(travelled) * toyInfo.Luck
 		luckLabel.Text = string.format("%.2fX", luck)
 		luckLabel.TextColor3 = C.Gold:Lerp(C.Pink, math.clamp(travelled / (Config.Map.ZoneLength * #Config.Zones), 0, 1))
 		if math.floor(luck) > lastWhole then

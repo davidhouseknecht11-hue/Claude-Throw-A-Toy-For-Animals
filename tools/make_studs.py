@@ -1,5 +1,6 @@
-# Generates assets/studs.png: one tileable grey stud (multiplied by part color in Blender and Roblox).
-import math, os, struct, zlib
+# Generates assets/studs.png (raised stud) and assets/inlet.png (recessed square, the reference game's look):
+# one tileable grey cell, multiplied by part color in Blender and Roblox.
+import math, os, struct, sys, zlib
 
 N = 256
 OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "studs.png")
@@ -35,6 +36,21 @@ def shade(x, y):
     return max(0, min(1, val))
 
 
+def inlet(x, y):
+    """Recessed square per stud cell: dark top/left inner wall, lit bottom/right wall, slightly darker floor."""
+    u, v = (x + 0.5) / N - 0.5, (y + 0.5) / N - 0.5
+    H, W = 0.3, 0.06  # half size of the hole, wall width
+    a = max(abs(u), abs(v))
+    if a > 0.49:
+        return 0.86  # faint tile seam
+    if a > H:
+        return 0.93  # flat top surface
+    if a > H - W:  # walls: light comes from top-left, so the top/left walls of a hole are in shadow
+        top_left = (abs(v) >= abs(u) and v < 0) or (abs(u) > abs(v) and u < 0)
+        return 0.62 if top_left else 1.0
+    return 0.84  # recessed floor
+
+
 def write_png(path, pixels):
     raw = b"".join(b"\x00" + bytes(row) for row in pixels)
     def chunk(t, d):
@@ -44,13 +60,15 @@ def write_png(path, pixels):
     open(path, "wb").write(png)
 
 
+if "inlet" in sys.argv:
+    shade, OUT = inlet, os.path.join(os.path.dirname(__file__), "..", "assets", "inlet.png")
 # 2x2 supersampling for smooth edges
 rows = []
 for y in range(N):
     row = []
     for x in range(N):
         s = sum(shade(x + dx, y + dy) for dx in (-0.25, 0.25) for dy in (-0.25, 0.25)) / 4
-        c = int((1 - (1 - s) * 0.5) * 255)  # soft, low-contrast studs like classic Roblox pets
+        c = int((1 - (1 - s) * (0.85 if shade is inlet else 0.5)) * 255)  # inlet holes read clearly; studs stay soft
         row += [c, c, c]
     rows.append(row)
 write_png(OUT, rows)

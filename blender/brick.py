@@ -43,6 +43,31 @@ class Brick:
         mr = (rot[0], -rot[1], -rot[2]) if rot else None
         return self.b(size, (-x, y, z), color, mb, mr, kind)
 
+    def blob(self, c, r, color, bone="body", slices=4, kind="plastic"):
+        """Rounded voxel ellipsoid: stacked slices, each a cross of two boxes (octagon section) shrinking toward the poles."""
+        cx, cy, cz = c
+        rx, ry, rz = r
+        h = 2 * rz / slices
+        for i in range(slices):
+            zm = -rz + h * (i + 0.5)
+            f = math.sqrt(max(0.0, 1 - (zm / rz) ** 2))
+            self.b((2 * rx * f, 2 * ry * f * 0.72, h), (cx, cy, cz + zm), color, bone, kind=kind)
+            self.b((2 * rx * f * 0.72, 2 * ry * f, h), (cx, cy, cz + zm), color, bone, kind=kind)
+        return self
+
+    def limb(self, p0, p1, w0, w1, color, bone="body", kind="plastic", mirror=False):
+        """Box(es) from p0 to p1 (long axis = local Y), tapering from width w0 to w1 in two steps."""
+        d = [p1[k] - p0[k] for k in range(3)]
+        L = math.sqrt(sum(v * v for v in d)) or 1e-3
+        rot = (math.degrees(math.atan2(d[2], math.hypot(d[0], d[1]))), 0, math.degrees(math.atan2(-d[0], d[1])))
+        put = self.m if mirror else self.b
+        if abs(w0 - w1) < 1e-6:
+            return put((w0, L, w0), tuple((p0[k] + p1[k]) / 2 for k in range(3)), color, bone, rot, kind)
+        for t0, w in ((0.0, w0), (0.5, w1)):
+            mid = [p0[k] + d[k] * (t0 + 0.25) for k in range(3)]
+            put((w, L * 0.55, w), tuple(mid), color, bone, rot, kind)
+        return self
+
     def pivot(self, bone, pos):
         self.pivots[bone] = pos
         return self
@@ -65,6 +90,19 @@ class Brick:
                             r=[round(v, 5) for row in R for v in row], c=bx["color"], m=bx["kind"], b=bx["bone"]))
         piv = {k: [round(v[0], 3), round(v[2], 3), round(-v[1], 3)] for k, v in self.pivots.items()}
         return dict(boxes=out, pivots=piv, group=self.group)
+
+
+def roundify(a, minsize=0.55):
+    """Turn every big unrotated plastic block (heads, bodies, thick limbs) into a rounded voxel blob of the same extents.
+    Thin parts (eyes, ears, stripes, blob slices) stay as they are, so running it twice changes nothing."""
+    old, a.boxes = a.boxes, []
+    for bx in old:
+        sx, sy, sz = bx["size"]
+        if bx["rot"] is None and bx["kind"] == "plastic" and min(sx, sy, sz) >= minsize:
+            a.blob(bx["pos"], (sx * 0.55, sy * 0.55, sz * 0.53), bx["color"], bx["bone"], slices=max(2, min(5, round(sz / 0.3))))
+        else:
+            a.boxes.append(bx)
+    return a
 
 
 def legs4(a, hipz, x, yf, yb, w, color, hoof=None, hoofh=0.22, bones=True, legh=None):

@@ -64,6 +64,7 @@ local function defaultData()
 		Animals = {} :: { Animal },
 		Index = {},
 		LuckUntil = 0,
+		LuckyThrows = 0, -- bought Super Lucky Throws waiting to be used
 		Throws = 0,
 		LastOnline = 0,
 	}
@@ -235,7 +236,7 @@ local function renderPlot(prof)
 		existing[m:GetAttribute("AnimalId") or ""] = m
 	end
 	local floor = plot:WaitForChild("Floor") :: BasePart
-	local cols = 6
+	local cols = 5
 	local spacingX = (floor.Size.X - 8) / (cols - 1)
 	local i = 0
 	for _, a in prof.Data.Animals do
@@ -265,8 +266,8 @@ local function renderPlot(prof)
 		end
 		local m = template:Clone()
 		local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
-		m:ScaleTo(size.Scale)
-		local local_ = CFrame.new(-floor.Size.X / 2 + 4 + col * spacingX, floor.Size.Y / 2, -floor.Size.Z / 2 + 5 + row * 7.5) -- starting spot; they wander from here
+		m:ScaleTo(size.Scale * Config.PetScale)
+		local local_ = CFrame.new(-floor.Size.X / 2 + 4 + col * spacingX, floor.Size.Y / 2, -floor.Size.Z / 2 + 6 + row * 9.5) -- starting spot; they wander from here
 			* CFrame.Angles(0, math.rad(180), 0)
 		m:PivotTo(floor.CFrame * local_)
 		decoratePet(m, a)
@@ -313,7 +314,7 @@ local function snapshot(prof)
 	end
 	return {
 		Cash = d.Cash, Power = d.Power, Toys = d.Toys, Toy = d.Toy, Bar = d.Bar, Slots = d.Slots, Animals = animals,
-		Index = d.Index, LuckUntil = d.LuckUntil, Income = totalIncome(prof), IndexBonus = indexBonus(d), HeldId = prof.HeldId,
+		Index = d.Index, LuckUntil = d.LuckUntil, LuckyThrows = d.LuckyThrows or 0, Income = totalIncome(prof), IndexBonus = indexBonus(d), HeldId = prof.HeldId,
 		Passes = prof.Passes, ServerTime = os.time(),
 	}
 end
@@ -397,7 +398,7 @@ local function holdPet(player: Player, prof)
 	m = m:Clone()
 	local _, ext = m:GetBoundingBox()
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
-	local k = 2.4 / math.max(ext.X, ext.Y, ext.Z) * size.Scale -- ~2.5 studs for a normal pet; Big / Large / Huge scale up like on the plot
+	local k = 4.5 / math.max(ext.X, ext.Y, ext.Z) * size.Scale -- ~4.5 studs for a normal pet; Big / Large / Huge scale up like on the plot
 	m:ScaleTo(k)
 	Mutations.Apply(m, a.Mutation)
 	local tool = Instance.new("Tool")
@@ -407,7 +408,7 @@ local function holdPet(player: Player, prof)
 	tool:SetAttribute("Animal", a.Name) -- clients animate it with this pet's rig
 	tool:SetAttribute("PetScale", m:GetScale())
 	CollectionService:AddTag(tool, "HeldPet")
-	tool.Grip = CFrame.new(0, -0.35, 0.6 * size.Scale) -- upright on the palm, in front of the hand (bigger pets further out)
+	tool.Grip = CFrame.new(0, -0.35, 1.1 * size.Scale) -- upright on the palm, in front of the hand (bigger pets further out)
 	local root = m.PrimaryPart :: BasePart
 	root.Name = "Handle"
 	for _, p in m:GetChildren() do
@@ -606,31 +607,45 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	d.Power += powerGain
 	local zone = Config.ZoneAt(dist)
 	local toy = Config.ToyInfo[d.Toy] or Config.Toys[1]
-	local boosted = d.LuckUntil > os.time()
-	local luck = Config.LuckAt(dist) * toy.Luck * (boosted and Config.LuckBoost or 1)
+	local boosted = (d.LuckyThrows or 0) > 0 -- Super Lucky Throw: best of 100 rolls for mutation, size and Secret
+	if boosted then
+		d.LuckyThrows -= 1
+	end
+	local rolls = boosted and Config.LuckyRolls or 1
+	local luck = Config.LuckAt(dist) * toy.Luck
 	-- each Secret is a flat 1 in 10,000; otherwise the normal luck-weighted pick among the zone's regular animals
 	local secrets, regular = {}, {}
 	for _, a in Config.Zones[zone].Animals do
 		table.insert(a[2] == "Secret" and secrets or regular, a)
 	end
-	local roll = rng:NextNumber()
+	local pAny = 1 - (1 - #secrets * Config.SecretChance) ^ rolls -- chance any Secret comes, after the best-of rolls
 	local pick, pA
-	if roll < #secrets * Config.SecretChance then
-		pick, pA = secrets[math.floor(roll / Config.SecretChance) + 1], Config.SecretChance
+	if #secrets > 0 and rng:NextNumber() < pAny then
+		pick, pA = secrets[rng:NextInteger(1, #secrets)], pAny / #secrets
 	else
 		pick, pA = Util.Pick(regular, function(a)
 			local ri = Config.RarityIndex[a[2]]
 			return Config.Rarities[ri].Weight * luck ^ ((ri - 1) / 5)
 		end, rng)
-		pA *= 1 - #secrets * Config.SecretChance
+		pA *= 1 - pAny
 	end
 	local luckSoft = math.min(luck, 60)
-	local size, pS = Util.Pick(Config.Sizes, function(s)
+	local function rollBest(list, weightOf)
+		local w = {}
+		for i, it in list do
+			w[i] = weightOf(it)
+		end
+		local p = Config.BestOf(w, rolls)
+		return Util.Pick(list, function(it)
+			return p[table.find(list, it) :: number]
+		end, rng)
+	end
+	local size, pS = rollBest(Config.Sizes, function(s)
 		return s.Chance * (s.Name ~= "Normal" and luckSoft ^ 0.15 or 1)
-	end, rng)
-	local mut, pM = Util.Pick(Config.Mutations, function(m)
+	end)
+	local mut, pM = rollBest(Config.Mutations, function(m)
 		return m.Chance * (m.Name ~= "None" and luckSoft ^ 0.2 or 1)
-	end, rng)
+	end)
 	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation, at this luck
 	local secret = pick[2] == "Secret"
 	local oneIn = mut.Name ~= "None" or secret -- mutations and secrets get the "1 in X" reveal
@@ -1044,6 +1059,7 @@ Players.PlayerAdded:Connect(function(player)
 		task.wait(0.2)
 		sendHome(player)
 		local hum = char:WaitForChild("Humanoid") :: Humanoid
+		hum.WalkSpeed = Config.WalkSpeed
 		holdPet(player, prof) -- a new character gets the held pet back
 		hum:GetPropertyChangedSignal("Jump"):Connect(function()
 			if hum.Jump then
@@ -1144,8 +1160,8 @@ MPS.ProcessReceipt = function(receipt)
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	if receipt.ProductId == Config.LuckProductId then
-		prof.Data.LuckUntil = math.max(prof.Data.LuckUntil, os.time()) + Config.LuckBoostSeconds
-		notify(player, "🍀 " .. Config.LuckBoost .. "x LUCK active!", "good")
+		prof.Data.LuckyThrows = (prof.Data.LuckyThrows or 0) + 1
+		notify(player, "🍀 Your next throw is a SUPER LUCKY THROW!", "good")
 		pushData(player)
 		save(player)
 		return Enum.ProductPurchaseDecision.PurchaseGranted

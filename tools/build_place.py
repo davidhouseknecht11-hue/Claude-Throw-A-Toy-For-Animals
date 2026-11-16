@@ -475,11 +475,11 @@ def cliff_side(g, Z, side, z0, z1):
 
 # ---------------- BASE PLAZA ----------------
 base = mapm.add(Item("Model", "Base"))
-YARD_X, YARD_Z0, YARD_Z1 = 160, -70, 72  # courtyard: x in [-160, 160], z from the runway mouth to behind the plots
+YARD_X, YARD_Z0, YARD_Z1 = 150, -70, 30  # courtyard: x in [-160, 160], z from the runway mouth to behind the plots
 for i in range(-8, 8):  # checker yard floor
-    for j in range(7):
+    for j in range(5):
         c = "62CE48" if (i + j) % 2 == 0 else "58BE40"
-        base.add(part("Floor", (20, 2, 20.3), (i * 20 + 10, -1, YARD_Z0 + 10 + j * 20.3), c))
+        base.add(part("Floor", (20, 2, 20), (i * 20 + 10, -1, YARD_Z0 + 10 + j * 20), c))
 for k in range(-2, 2):  # orange checker launch strip at the runway mouth
     for r in range(2):
         c = "FF9A2E" if (k + r) % 2 == 0 else "FFB54A"
@@ -495,20 +495,20 @@ def terrace(g, x, z, sx, sz):
 
 
 for side in (-1, 1):  # side walls: low step, then a tall step behind
-    for k in range(8):
+    for k in range(5):
         zc = YARD_Z0 + 10 + k * 20
         terrace(base, side * (YARD_X + 6), zc, 12, 20)
         h = rnd.uniform(24, 32)
         base.add(part("Wall", (24, h, 20), (side * (YARD_X + 24), h / 2, zc), shade("96623C", rnd.uniform(0.9, 1.06))))
         base.add(part("WallTop", (24.4, 3, 20.4), (side * (YARD_X + 24), h + 1.5, zc), shade("78DC50", rnd.uniform(0.95, 1.05))))
-for k in range(-9, 9):  # back wall behind the plots
+for k in range(-8, 8):  # back wall behind the plots
     xc = k * 20 + 10
     terrace(base, xc, YARD_Z1 + 6, 20, 12)
     h = rnd.uniform(24, 32)
     base.add(part("Wall", (20, h, 24), (xc, h / 2, YARD_Z1 + 24), shade("96623C", rnd.uniform(0.9, 1.06))))
     base.add(part("WallTop", (20.4, 3, 24.4), (xc, h + 1.5, YARD_Z1 + 24), shade("78DC50", rnd.uniform(0.95, 1.05))))
 for side in (-1, 1):  # front wall either side of the runway mouth
-    for k in range(7):
+    for k in range(6):
         xc = side * (44 + k * 20)
         h = rnd.uniform(22, 30)
         base.add(part("Wall", (20, h, 12), (xc, h / 2, -76), shade("96623C", rnd.uniform(0.9, 1.06))))
@@ -518,10 +518,10 @@ for _ in range(30):  # trees/bushes up on the terraces
         side = rnd.choice((-1, 1))
         theme_prop(base, "backyard", side * rnd.uniform(YARD_X + 14, YARD_X + 34), rnd.uniform(YARD_Z0, YARD_Z1 + 20), 30)
     else:
-        theme_prop(base, "backyard", rnd.uniform(-170, 170), rnd.uniform(YARD_Z1 + 14, YARD_Z1 + 34), 30)
-for x in (-110, -40, 40, 110):  # lamps along the open middle of the yard
-    base.add(part("LampPost", (0.8, 9, 0.8), (x, 4.5, -20), "3A3A48"))
-    base.add(part("Lamp", (1.8, 1.8, 1.8), (x, 9.5, -20), "FFE9A0", kind="neon"))
+        theme_prop(base, "backyard", rnd.uniform(-160, 160), rnd.uniform(YARD_Z1 + 14, YARD_Z1 + 34), 30)
+for x in (-110, 110):  # lamps out by the stalls
+    base.add(part("LampPost", (0.8, 9, 0.8), (x, 4.5, -55), "3A3A48"))
+    base.add(part("Lamp", (1.8, 1.8, 1.8), (x, 9.5, -55), "FFE9A0", kind="neon"))
 # title arch over the canyon mouth
 for side in (-1, 1):
     base.add(part("ArchPillar", (4, 50, 4), (side * 33, 25, -68), "FF8A1C"))
@@ -530,10 +530,13 @@ base.add(part("TitleBoard", (60, 8, 2), (0, 52, -68), "FF5CA8"))  # high enough 
 base.add(part("TitleTrim", (62, 1, 2.4), (0, 47.6, -68), "FFD23C"))
 base.add(part("TitleTrim", (62, 1, 2.4), (0, 56.4, -68), "FFD23C"))
 
-spawn = part("SpawnLocation", (12, 1, 12), (0, 0.5, -10), "FFFFFF", cls="SpawnLocation")
+spawn = part("SpawnLocation", (12, 1, 12), (0, 0.5, -48), "FFFFFF", cls="SpawnLocation")
 spawn.raw('<bool name="Neutral">true</bool>').raw('<int name="Duration">0</int>')
 mapm.add(spawn)
-mapm.add(part("ThrowLine", (68, 0.3, 1.5), (0, 0.15, -66.5), "FFFFFF", kind="neon", collide=False))
+mapm.add(part("ThrowLine", (68, 0.3, 1.5), (0, 0.15, -66.5), "FFFFFF", kind="neon", collide=False, transparency=1))  # logic line (invisible)
+dots = mapm.add(Item("Model", "ThrowDots"))  # what players see: a dotted row of glowing white squares, like the reference
+for k in range(34):
+    dots.add(part("Dot", (1.1, 0.26, 1.1), (-33 + k * 2, 0.13, -66.5), "FFFFFF", kind="neon", collide=False, variant=None, shadow=False, query=False))
 
 sell = mapm.add(Item("Model", "SellStand"))
 sx0, sz0 = 58, -50  # front-right of the yard, by the runway
@@ -592,10 +595,10 @@ vendor.add(part("Right Leg", (1, 2, 1), V(0.5, 1, 0), GRN, rot=vr, variant=None)
 # ---------------- PLOTS ----------------
 plots = mapm.add(Item("Folder", "Plots"))
 idx = 0
-for px in (-130, -78, -26, 26, 78, 130):
+for px in (-120, -72, -24, 24, 72, 120):
     for rot in (math.pi,):  # local +z (the pen's open front) faces the runway (-z)
         idx += 1
-        o = (px, 0, 42)
+        o = (px, 0, 4)  # close to the runway, like the reference
         pm = plots.add(Item("Model", f"Plot{idx}"))
         L = lambda lx, ly, lz: tf(o, rot, lx, ly, lz)
         pm.add(part("Floor", (46, 0.4, 46), L(0, 0.2, 0), "4FB83A", rot=rot))
@@ -619,15 +622,34 @@ for px in (-130, -78, -26, 26, 78, 130):
             pm.add(part("SignPost", (0.8, 8, 0.8), L(lx, 4, 24), "A8703C", rot=rot))
         pm.add(part("OwnerSign", (14, 3, 0.8), L(0, 8, 24), "FFC93C", rot=rot))
         pm.add(part("OwnerTrim", (14.4, 0.4, 1.0), L(0, 9.6, 24), "FF8A1C", rot=rot))
-        pm.add(part("SlotSign", (5, 4, 0.6), L(-16, 2.5, 20), "FFFFFF", rot=rot))
-        pm.add(part("SlotSignStripe", (5.1, 0.8, 0.7), L(-16, 4.1, 20), "4CC84A", rot=rot))
+        # slot upgrade: yellow wooden sign on posts (text "🐾 18 > 20 / $price" comes from the server), like the reference
+        for dx in (-3.2, 3.2):
+            pm.add(part("SlotPost", (0.7, 5.2, 0.7), L(-16 + dx, 2.6, 20), "A8703C", rot=rot))
+        pm.add(part("SlotSign", (7, 3.4, 0.7), L(-16, 3.9, 20), "FFC21C", rot=rot))
+        pm.add(part("SlotSignPlate", (5.6, 1.1, 0.75), L(-16, 3.2, 20), "2A2A3A", rot=rot, collide=False))
+        # pull-up bar: white posts with rainbow bands, glowing crossbar, level-coloured infinity sign on top,
+        # dashed white ring on the ground and a round gold upgrade pad (BarFrame parts take the bar level's colour)
         for lx in (12, 20):
-            pm.add(part("BarFrame", (1, 10, 1), L(lx, 5, 30), "4656C8", rot=rot))
-            pm.add(part("BarFoot", (2, 0.6, 2), L(lx, 0.3, 30), "2A2A3A", rot=rot))
-        pm.add(part("BarFrame", (9, 0.8, 0.8), L(16, 9.6, 30), "4656C8", rot=rot))
+            pm.add(part("BarPost", (1, 10, 1), L(lx, 5, 30), "F4F4F4", rot=rot))
+            for k, c in enumerate(("FF4A4A", "FF9A2E", "FFE45C", "4CD964", "4CB4FF", "B46CFF")):
+                pm.add(part("BarBand", (1.08, 0.36, 1.08), L(lx, 0.9 + k * 0.42, 30), c, kind="neon", rot=rot, collide=False))
+        pm.add(part("BarPost", (9, 0.8, 0.8), L(16, 9.6, 30), "F4F4F4", rot=rot))
         pm.add(part("BarGlow", (7, 0.4, 0.4), L(16, 9.6, 30.5), "FFFFFF", kind="neon", rot=rot, collide=False))
+        cx, _, cz = L(16, 0, 30)
+        for side in (-1, 1):  # infinity sign: two loops of short glowing segments
+            for k in range(12):
+                th = 2 * math.pi * k / 12
+                c_, s_ = math.cos(th + math.pi / 2), math.sin(th + math.pi / 2)
+                pm.add(part("BarFrame", (0.75, 0.32, 0.32), (cx + side * 1.25 + 1.2 * math.cos(th), 12.3 + 1.0 * math.sin(th), cz), "4656C8",
+                            kind="neon", R=(c_, -s_, 0, s_, c_, 0, 0, 0, 1), collide=False, query=False))
+        for k in range(18):  # dashed ring around the bar
+            t = 2 * math.pi * k / 18
+            pm.add(part("BarRing", (1.5, 0.08, 0.4), (cx + 7.5 * math.cos(t), 0.06, cz + 7.5 * math.sin(t)), "FFFFFF", kind="neon",
+                        rot=-t - math.pi / 2, collide=False, shadow=False, query=False))
         pm.add(part("TrainSpot", (2, 2, 1), L(16, 6.2, 31), "FFFFFF", rot=rot, collide=False, transparency=1))
-        pm.add(part("UpgradePad", (6, 0.4, 6), L(16, 0.5, 38), "FFC93C", kind="neon", rot=rot, collide=False))
+        ROLL = (0, -1, 0, 1, 0, 0, 0, 0, 1)  # cylinder axis (X) stood upright
+        pm.add(part("PadRim", (0.3, 6.6, 6.6), L(16, 0.2, 38), "8A8A96", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
+        pm.add(part("UpgradePad", (0.4, 5.6, 5.6), L(16, 0.4, 38), "FFC93C", kind="neon", R=ROLL, collide=False)).raw('<token name="shape">2</token>')
 
 # ---------------- CORRIDOR ----------------
 cor = mapm.add(Item("Model", "Corridor"))
@@ -717,7 +739,7 @@ lighting.add(Item("SunRaysEffect", "SunRays")).raw('<float name="Intensity">0.04
 matsvc = Item("MaterialService", "MaterialService")
 for vname, tile in (("Studs", 1.0), ("StudsSmall", 0.25)):
     mv = matsvc.add(Item("MaterialVariant", vname))
-    mv.raw('<token name="BaseMaterial">256</token>').raw(content("ColorMap", ASSETS.get("studs", ""))).raw(f'<float name="StudsPerTile">{tile}</float>')
+    mv.raw('<token name="BaseMaterial">256</token>').raw(content("ColorMap", ASSETS.get("inlet") or ASSETS.get("studs", "")))  # recessed-square look; studs until inlet.png is uploaded.raw(f'<float name="StudsPerTile">{tile}</float>')
     mv.raw('<token name="MaterialPattern">0</token>')
 
 out = ['<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '
