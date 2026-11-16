@@ -123,6 +123,12 @@ def extent(name):
 groups = {}
 for m in models:
     groups.setdefault(m.group, []).append(m.name)
+for g in list(groups):  # big groups review in sheets of 8 so each model is large enough to judge
+    names = groups[g]
+    if len(names) > 10:
+        del groups[g]
+        for k in range(0, len(names), 8):
+            groups[f"{g}_{k // 8}"] = names[k:k + 8]
 for g, names in groups.items():
     roots = [bpy.data.objects[n] for n in names]
     for ob in bpy.data.objects:

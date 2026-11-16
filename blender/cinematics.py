@@ -626,6 +626,8 @@ CINEMATICS = {
     "Nuclear Frog": c_nuclear_frog, "Ice Dragon": c_ice_dragon, "Cyber Dog": c_cyber_dog, "Cursed Teddy": c_cursed_teddy,
     "Emperor Penguin": c_emperor_penguin,
 }
+exec(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "cinematics_world2.py"), encoding="utf-8").read())
+CINEMATICS.update(W2)  # noqa: F821  (defined by the exec above)
 
 
 # ---------------------------------------------------------------- export

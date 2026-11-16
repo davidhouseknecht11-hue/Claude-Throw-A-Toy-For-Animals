@@ -1034,8 +1034,9 @@ end)
 
 -- ---------- INDEX ----------
 local indexFrame, indexBody = panel("📖 Animal Index", C.Blue)
-local indexTabs = make("Frame", { Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, Parent = indexBody },
-	{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6) }) })
+local indexTabs = make("ScrollingFrame", { Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, ScrollBarThickness = 5, ScrollingDirection = Enum.ScrollingDirection.X,
+	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, Parent = indexBody }, -- 18 zones: scroll sideways
+	{ make("UIListLayout", { FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }) })
 local indexGrid = make("ScrollingFrame", { Size = UDim2.new(1, 0, 1, -110), Position = UDim2.new(0, 0, 0, 54), BackgroundTransparency = 1, ScrollBarThickness = 8,
 	CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = indexBody },
 	{ make("UIGridLayout", { CellSize = UDim2.fromOffset(120, 140), CellPadding = UDim2.fromOffset(10, 10) }) })
@@ -1074,7 +1075,7 @@ local function refreshIndex()
 		Config.IndexZoneBonus * 100, Data.IndexBonus or 1)
 end
 for zi, z in Config.Zones do
-	button({ Size = UDim2.new(1 / #Config.Zones, -6, 1, 0), Text = z.Icon .. " " .. z.Name, Color = z.Floor:Lerp(C.Dark, 0.15), Parent = indexTabs }, function()
+	button({ Size = UDim2.new(0, 150, 0, 44), LayoutOrder = zi, Text = z.Icon .. " " .. z.Name, Color = z.Floor:Lerp(C.Dark, 0.15), Parent = indexTabs }, function()
 		indexZone = zi
 		refreshIndex()
 	end)

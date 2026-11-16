@@ -845,3 +845,8 @@ for x in (-0.7, 0, 0.7):
 
 a = Brick("FX Carpet", "FX")
 a.b((1.6, 6.0, 0.06), (0, 3.0, 0.03), "B0102A").b((1.75, 6.0, 0.05), (0, 3.0, 0.025), "FFC21C")
+
+
+# World 2 (12 new zones, their Secrets, the extra Secrets, new toys and FX)
+import os as _os
+exec(open(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "pets_world2.py"), encoding="utf-8").read())

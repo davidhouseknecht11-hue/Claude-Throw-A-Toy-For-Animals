@@ -129,6 +129,18 @@ ZONES = [
     dict(name="Safari", floor="E8BE6E", wall="C47840", top="CDB450", theme="safari"),
     dict(name="Arctic", floor="ECF6FF", wall="8CC4F0", top="FFFFFF", theme="arctic"),
     dict(name="Fantasy", floor="7850D2", wall="3C2878", top="FF78E6", theme="fantasy"),
+    dict(name="Dinosaur Island", floor="5AA03C", wall="6A4A2A", top="3C8A2A", theme="dino"),
+    dict(name="Lost Desert", floor="E8C878", wall="C8964A", top="F0D890", theme="desert"),
+    dict(name="Sakura Gardens", floor="8AD070", wall="8A5A4A", top="FFB0D0", theme="sakura"),
+    dict(name="Lost Atlantis", floor="2A6A8A", wall="1A3A5A", top="2AD8C8", theme="atlantis"),
+    dict(name="Sky Kingdom", floor="C8E8FF", wall="8AB8E8", top="FFFFFF", theme="sky"),
+    dict(name="Halloween Town", floor="3A2A4A", wall="2A1A2A", top="FF8A1C", theme="halloween"),
+    dict(name="Tropical Paradise", floor="F0E0A0", wall="3CB4A8", top="4CD964", theme="tropical"),
+    dict(name="Toy Factory", floor="9AA4B2", wall="5A6070", top="FFC21C", theme="toy"),
+    dict(name="Ice Age", floor="DCEEFF", wall="6A9ACA", top="F4FAFF", theme="iceage"),
+    dict(name="Mushroom Kingdom", floor="4A8A3A", wall="5A3A6A", top="E8401C", theme="mushroom"),
+    dict(name="Heaven's Gate", floor="FFF4D8", wall="E8D8A0", top="FFE45C", theme="heaven"),
+    dict(name="Underworld", floor="2A0A0A", wall="1C0A0A", top="FF3B1C", theme="underworld"),
 ]
 CORRIDOR_START, ZONE_LEN, HALF_W = -72, 230, 34
 END_Z = CORRIDOR_START - ZONE_LEN * len(ZONES)
@@ -169,7 +181,9 @@ def flowers(g, x, z, y=0.0, n=4):
 
 def theme_prop(g, theme, x, z, y=0.0):
     r = rnd.random()
-    if theme == "backyard":
+    if theme in ("dino", "desert", "sakura", "atlantis", "sky", "halloween", "tropical", "toy", "iceage", "mushroom", "heaven", "underworld"):
+        world2_prop(g, theme, x, z, y, r)
+    elif theme == "backyard":
         if r < 0.45:
             tree(g, x, z, y, h=rnd.uniform(6, 10), w=rnd.uniform(6, 9))
         elif r < 0.75:
@@ -247,6 +261,184 @@ def theme_prop(g, theme, x, z, y=0.0):
                 g.add(part("Dot", (1, 0.4, 1), (x + rnd.uniform(-2.5, 2.5), y + h + 2.1, z + rnd.uniform(-2.5, 2.5)), "FFFFFF", kind="neon"))
         else:
             g.add(part("FloatRock", (4, 2.5, 4), (x, y + rnd.uniform(8, 16), z), "5A4A8A"))
+
+
+def palm(g, x, z, y=0.0, h=None):
+    h = h or rnd.uniform(8, 12)
+    for k in range(4):
+        g.add(part("PalmTrunk", (1.1, h / 4 + 0.2, 1.1), (x + k * 0.35, y + h / 8 + k * h / 4, z), "A0784A"))
+    top = (x + 1.4, y + h + 0.3, z)
+    for k in range(6):
+        a = k * math.pi / 3
+        g.add(part("Frond", (5, 0.4, 1.4), (top[0] + math.cos(a) * 2.2, top[1] - 0.6, top[2] + math.sin(a) * 2.2), "3CB44A", rot=a))
+
+
+def tower(g, x, z, y=0.0, c="FFC21C", roof="FFE45C", h=14, w=5, glow="FFE45C"):
+    g.add(part("Tower", (w, h, w), (x, y + h / 2, z), c))
+    for k in (-1, 1):
+        g.add(part("Crenel", (1.2, 1.4, w), (x + k * (w / 2 - 0.6), y + h + 0.7, z), c))
+    g.add(part("Roof", (w * 0.8, 3, w * 0.8), (x, y + h + 2.2, z), roof))
+    g.add(part("Window", (1, 1.8, 0.2), (x, y + h * 0.6, z + w / 2 + 0.05), glow, kind="neon"))
+
+
+def world2_prop(g, theme, x, z, y, r):
+    """Props for the 12 World 2 zones (same idea as theme_prop: a weighted pick per spot)."""
+    if theme == "dino":
+        if r < 0.35:
+            for k in range(6):
+                a = k * math.pi / 3
+                g.add(part("GiantFern", (7, 0.5, 2), (x + math.cos(a) * 3, y + 2.5, z + math.sin(a) * 3), shade("2E9A3A", rnd.uniform(0.9, 1.1)), rot=a, collide=False))
+        elif r < 0.6:
+            for k, (w, hh) in enumerate(((12, 4), (9, 4), (6, 3), (4, 2))):
+                g.add(part("Volcano", (w, hh, w), (x, y + 2 + sum((4, 4, 3, 2)[:k]), z), shade("5A3A2A", 1 - k * 0.06)))
+            g.add(part("Lava", (3, 0.6, 3), (x, y + 13.3, z), "FF5A1C", kind="neon"))
+        else:
+            for k in range(3):
+                g.add(part("DinoEgg", (1.6, 2.2, 1.6), (x + k * 2, y + 1.1, z + (k % 2)), rnd.choice(["F4F0E0", "C8E8A0", "E8D8F0"])))
+                g.add(part("Spot", (0.5, 0.5, 0.2), (x + k * 2, y + 1.4, z + (k % 2) + 0.8), "6A8A4A", collide=False))
+    elif theme == "desert":
+        if r < 0.3:
+            for k, w in enumerate((14, 10, 6, 2.5)):
+                g.add(part("Pyramid", (w, 3.2, w), (x, y + 1.6 + k * 3.2, z), shade("E8C070", 1 - k * 0.04)))
+        elif r < 0.6:
+            g.add(part("Dune", (10, 3, 7), (x, y + 1.5, z), "F0D08A", rot=rnd.uniform(0, 1)))
+            g.add(part("Dune", (6, 2, 5), (x + 2, y + 3.4, z), "F4D898"))
+        elif r < 0.8:
+            palm(g, x, z, y)
+            g.add(part("Oasis", (7, 0.3, 6), (x - 3, y + 0.15, z + 2), "3AA8FF", kind="glass", transparency=0.25, collide=False))
+        else:
+            g.add(part("Cactus", (1.4, 5, 1.4), (x, y + 2.5, z), "4CA03A"))
+            g.add(part("CactusArm", (2.4, 1, 1), (x + 1.2, y + 3.2, z), "4CA03A"))
+    elif theme == "sakura":
+        if r < 0.5:
+            tree(g, x, z, y, trunk="6A3A2A", leaf=rnd.choice(["FFB0D0", "FF9AC8", "FFD0E8"]), h=rnd.uniform(7, 11), w=rnd.uniform(7, 10))
+        elif r < 0.75:
+            for k in range(5):
+                g.add(part("Bridge", (2.2, 0.6, 4), (x + k * 2 - 4, y + 1 + math.sin(k / 4 * math.pi) * 2, z), "D8301C"))
+            for k in (-5, 5):
+                g.add(part("BridgePost", (0.6, 3, 0.6), (x + k, y + 1.5, z + 1.8), "D8301C"))
+        else:
+            g.add(part("KoiPond", (8, 0.3, 6), (x, y + 0.15, z), "3AA8FF", kind="glass", transparency=0.25, collide=False))
+            for k in range(3):
+                g.add(part("Koi", (1.2, 0.4, 0.5), (x + rnd.uniform(-2.5, 2.5), y + 0.4, z + rnd.uniform(-2, 2)), rnd.choice(["FF7A3C", "FFFFFF"]), collide=False))
+    elif theme == "atlantis":
+        if r < 0.4:
+            h = rnd.uniform(8, 14)
+            g.add(part("Column", (2.2, h, 2.2), (x, y + h / 2, z), "8AA8B8"))
+            g.add(part("Capital", (3, 1, 3), (x, y + h + 0.5, z), "A8C8D8"))
+            g.add(part("Rune", (0.4, h * 0.6, 0.2), (x, y + h / 2, z + 1.15), "2AD8C8", kind="neon"))
+        elif r < 0.7:
+            g.add(part("Ruin", (8, 3, 5), (x, y + 1.5, z), "6A8A9A", rot=0.3))
+            g.add(part("RuinGlow", (6, 0.4, 0.4), (x, y + 3.2, z), "6FF0FF", kind="neon", rot=0.3))
+        else:
+            for k in range(4):
+                g.add(part("Kelp", (0.6, rnd.uniform(4, 8), 0.6), (x + k * 1.2, y + 3, z + (k % 2)), "2A9A6A", collide=False))
+            g.add(part("Coral", (2, 2, 2), (x - 2, y + 1, z), rnd.choice(["FF6AA0", "FF9A2A", "B45CFF"])))
+    elif theme == "sky":
+        if r < 0.4:
+            hh = y + rnd.uniform(10, 20)
+            g.add(part("FloatIsland", (9, 4, 8), (x, hh, z), "8A6A4A"))
+            g.add(part("FloatGrass", (9.4, 1, 8.4), (x, hh + 2.5, z), "6CD04A"))
+            g.add(part("FloatRock", (5, 3, 4), (x, hh - 3.2, z), "7A5A3A"))
+        elif r < 0.7:
+            for dx, dy, s2 in ((0, 0, 5), (3, 0.5, 4), (-3, 0.3, 4), (1, 2, 3.5)):
+                g.add(part("Cloud", (s2, s2 * 0.6, s2), (x + dx, y + rnd.uniform(6, 12) + dy, z), "FFFFFF", collide=False))
+        else:
+            h = rnd.uniform(10, 18)
+            g.add(part("Waterfall", (3, h, 1), (x, y + h / 2, z), "8FD8FF", kind="glass", transparency=0.3, collide=False))
+            g.add(part("Splash", (5, 0.6, 4), (x, y + 0.3, z), "C8F0FF", kind="glass", transparency=0.3, collide=False))
+    elif theme == "halloween":
+        if r < 0.3:
+            g.add(part("House", (8, 7, 7), (x, y + 3.5, z), "3A2A3A"))
+            g.add(part("HouseRoof", (9, 3, 8), (x, y + 8.5, z), "1C1018"))
+            for k in (-2, 2):
+                g.add(part("HouseWindow", (1.4, 1.6, 0.2), (x + k, y + 4.5, z + 3.55), "FFC21C", kind="neon"))
+        elif r < 0.65:
+            for k in range(2):
+                g.add(part("Pumpkin", (2.4, 2, 2.4), (x + k * 2.8, y + 1, z), "FF8A1C"))
+                g.add(part("PumpkinFace", (1.2, 0.4, 0.2), (x + k * 2.8, y + 1.1, z + 1.25), "FFE14A", kind="neon"))
+                g.add(part("PumpkinStem", (0.4, 0.6, 0.4), (x + k * 2.8, y + 2.3, z), "3C9A3C"))
+        else:
+            h = rnd.uniform(7, 11)
+            g.add(part("DeadTrunk", (1.2, h, 1.2), (x, y + h / 2, z), "2A1A1A"))
+            for k in range(3):
+                g.add(part("DeadBranch", (4, 0.6, 0.6), (x + 1.5 * (1 if k % 2 else -1), y + h * (0.5 + k * 0.15), z), "2A1A1A", rot=0.4 * k))
+    elif theme == "tropical":
+        if r < 0.5:
+            palm(g, x, z, y)
+        elif r < 0.75:
+            g.add(part("Hut", (7, 4, 6), (x, y + 2, z), "C8A070"))
+            g.add(part("HutRoof", (8.5, 2, 7.5), (x, y + 5, z), "E8C870"))
+            g.add(part("HutDoor", (1.4, 2.6, 0.2), (x, y + 1.3, z + 3.05), "6A4A2A"))
+        else:
+            g.add(part("UmbrellaPole", (0.3, 4, 0.3), (x, y + 2, z), "FFFFFF"))
+            g.add(part("Umbrella", (5, 0.6, 5), (x, y + 4.2, z), rnd.choice(["FF4A5A", "3AA8FF", "FFE03A"])))
+            g.add(part("Towel", (2, 0.1, 3.5), (x + 2, y + 0.05, z), "FF8AB8", collide=False))
+    elif theme == "toy":
+        if r < 0.4:
+            for k in range(3):
+                c = rnd.choice(["FF4A5A", "3AA8FF", "FFE03A", "4CD964", "B45CFF"])
+                s2 = rnd.uniform(2.5, 4)
+                g.add(part("ToyBlock", (s2, s2, s2), (x + k * 1.5, y + s2 / 2 + k * 2.6, z + (k % 2)), c, rot=k * 0.3))
+        elif r < 0.7:
+            g.add(part("Conveyor", (12, 1.2, 3), (x, y + 1.6, z), "3A3F4A"))
+            for k in range(5):
+                g.add(part("ConveyorStripe", (0.4, 0.1, 3), (x - 5 + k * 2.5, y + 2.25, z), "FFC21C", collide=False))
+            g.add(part("ConveyorLeg", (0.6, 1, 0.6), (x - 5, y + 0.5, z), "5A6070"))
+            g.add(part("ConveyorLeg", (0.6, 1, 0.6), (x + 5, y + 0.5, z), "5A6070"))
+        else:
+            g.add(part("Machine", (5, 6, 4), (x, y + 3, z), rnd.choice(["FF6A3C", "3AA8FF", "B45CFF"])))
+            g.add(part("Gear", (3, 3, 0.5), (x, y + 4, z + 2.3), "FFC21C", kind="neon", rot=0.4))
+            g.add(part("Pipe", (0.8, 4, 0.8), (x + 1.5, y + 8, z), "9AA4B2"))
+    elif theme == "iceage":
+        if r < 0.4:
+            h = rnd.uniform(10, 18)
+            g.add(part("Glacier", (8, h, 6), (x, y + h / 2, z), "A8DCFF", kind="glass", transparency=0.25))
+            g.add(part("GlacierCap", (8.4, 1.2, 6.4), (x, y + h + 0.6, z), "FFFFFF"))
+        elif r < 0.7:
+            for k, w in enumerate((12, 8, 4)):
+                g.add(part("SnowPeak", (w, 4, w), (x, y + 2 + k * 4, z), shade("F4FAFF", 1 - k * 0.03)))
+        else:
+            g.add(part("CaveL", (2, 6, 4), (x - 3, y + 3, z), "6A9ACA"))
+            g.add(part("CaveR", (2, 6, 4), (x + 3, y + 3, z), "6A9ACA"))
+            g.add(part("CaveTop", (8, 2, 4), (x, y + 7, z), "8AB8E8"))
+            g.add(part("Icicle", (0.6, 1.6, 0.6), (x, y + 5.2, z + 1), "C8F0FF", kind="glass"))
+    elif theme == "mushroom":
+        if r < 0.5:
+            h = rnd.uniform(5, 12)
+            g.add(part("Stem", (1.8, h, 1.8), (x, y + h / 2, z), "F4F0E8"))
+            cap = rnd.choice(["E8401C", "B45CFF", "FF8A1C", "3AA8FF"])
+            g.add(part("Cap", (9, 2.4, 9), (x, y + h + 1.2, z), cap))
+            g.add(part("Cap", (6, 1.2, 6), (x, y + h + 3, z), shade(cap, 1.12)))
+            for k in range(4):
+                g.add(part("Dot", (1.2, 0.4, 1.2), (x + rnd.uniform(-3, 3), y + h + 2.5, z + rnd.uniform(-3, 3)), "FFFFFF"))
+        elif r < 0.75:
+            g.add(part("GlowLake", (8, 0.3, 6), (x, y + 0.15, z), "6FF0FF", kind="neon", transparency=0.3, collide=False))
+        else:
+            g.add(part("TinyHouse", (2.4, 2, 2.4), (x, y + 1, z), "F4E8D0"))
+            g.add(part("TinyRoof", (3, 1.4, 3), (x, y + 2.7, z), "E8401C"))
+            g.add(part("TinyWindow", (0.6, 0.6, 0.2), (x, y + 1.2, z + 1.25), "FFE14A", kind="neon"))
+    elif theme == "heaven":
+        if r < 0.35:
+            tower(g, x, z, y, "FFE8A0", "FFC21C", rnd.uniform(12, 18), 5, "FFFFFF")
+        elif r < 0.65:
+            for dx, s2 in ((0, 5), (3, 4), (-3, 4)):
+                g.add(part("Cloud", (s2, s2 * 0.55, s2), (x + dx, y + rnd.uniform(1, 4), z), "FFFFFF", collide=False))
+        else:
+            for k in (-3, 3):
+                g.add(part("GatePillar", (1.4, 12, 1.4), (x + k, y + 6, z), "FFC21C"))
+            g.add(part("GateArch", (8, 1.4, 1.4), (x, y + 12.5, z), "FFC21C"))
+            g.add(part("GateGlow", (5, 10, 0.3), (x, y + 6, z), "FFF4C2", kind="neon", transparency=0.4, collide=False))
+    elif theme == "underworld":
+        if r < 0.35:
+            tower(g, x, z, y, "2A1A1A", "141010", rnd.uniform(12, 20), 5, "FF3B1C")
+        elif r < 0.65:
+            g.add(part("LavaPool", (8, 0.4, 6), (x, y + 0.2, z), "FF5A1C", kind="neon", collide=False))
+            g.add(part("LavaRim", (9, 0.3, 7), (x, y + 0.1, z), "1C0A0A"))
+        else:
+            hh = y + rnd.uniform(6, 14)
+            for k in range(6):
+                g.add(part("ChainLink", (0.4, 1.2, 0.9), (x, hh + k * 1.0, z), "5A5A62", rot=(k % 2) * math.pi / 2, collide=False))
 
 
 def cliff_side(g, Z, side, z0, z1):

@@ -53,6 +53,55 @@ Config.Zones = {
 		Sky = Color3.fromRGB(220, 150, 255),
 		Animals = { { "Phoenix", "Legendary" }, { "Dragon", "Mythic" }, { "Griffin", "Mythic" },
 			{ "Rainbow Dragon", "Secret" }, { "Galaxy Whale", "Secret" }, { "Galaxy Cat", "Secret" } } },
+	-- World 2 (zones 7-18). Each zone's Secrets are a flat 1 in 10,000 each; all of them are also in the Rainbow Egg.
+	{ Name = "Dinosaur Island", Icon = "🦖", Floor = Color3.fromHex("5AA03C"), Wall = Color3.fromHex("6A4A2A"), Top = Color3.fromHex("3C8A2A"),
+		Sky = Color3.fromHex("B8E8A0"),
+		Animals = { { "Raptor", "Common" }, { "Triceratops", "Uncommon" }, { "Pterodactyl", "Rare" }, { "T-Rex", "Epic" },
+			{ "Ancient Dragon", "Secret" }, { "Skeleton Rex", "Secret" }, { "Earth Turtle", "Secret" } } },
+	{ Name = "Lost Desert", Icon = "🏜️", Floor = Color3.fromHex("E8C878"), Wall = Color3.fromHex("C8964A"), Top = Color3.fromHex("F0D890"),
+		Sky = Color3.fromHex("FFD8A0"),
+		Animals = { { "Meerkat", "Common" }, { "Camel", "Uncommon" }, { "Fennec Fox", "Rare" }, { "Scorpion", "Epic" },
+			{ "Pharaoh Cat", "Secret" }, { "Golden Sphinx", "Secret" }, { "Lava Scorpion", "Secret" } } },
+	{ Name = "Sakura Gardens", Icon = "🌸", Floor = Color3.fromHex("8AD070"), Wall = Color3.fromHex("8A5A4A"), Top = Color3.fromHex("FFB0D0"),
+		Sky = Color3.fromHex("FFD8E8"),
+		Animals = { { "Koi Fish", "Common" }, { "Red Panda", "Uncommon" }, { "Crane", "Rare" }, { "Sakura Fox", "Epic" },
+			{ "Sakura Kitsune", "Secret" }, { "Kitsune", "Secret" }, { "Nine-Tailed Fox", "Secret" } } },
+	{ Name = "Lost Atlantis", Icon = "🔱", Floor = Color3.fromHex("2A6A8A"), Wall = Color3.fromHex("1A3A5A"), Top = Color3.fromHex("2AD8C8"),
+		Sky = Color3.fromHex("8AE0F0"),
+		Animals = { { "Seahorse", "Common" }, { "Dolphin", "Uncommon" }, { "Shark", "Rare" }, { "Sea Snake", "Epic" },
+			{ "Atlantis Leviathan", "Secret" }, { "Sea Serpent", "Secret" }, { "Cyber Shark", "Secret" }, { "Alien Octopus", "Secret" }, { "Cosmic Jellyfish", "Secret" } } },
+	{ Name = "Sky Kingdom", Icon = "☁️", Floor = Color3.fromHex("C8E8FF"), Wall = Color3.fromHex("8AB8E8"), Top = Color3.fromHex("FFFFFF"),
+		Sky = Color3.fromHex("D8F0FF"),
+		Animals = { { "Flying Squirrel", "Common" }, { "Owl", "Uncommon" }, { "Eagle", "Rare" }, { "Pegasus", "Epic" },
+			{ "Cloud Emperor", "Secret" }, { "Celestial Unicorn", "Secret" }, { "Thunder Wolf", "Secret" }, { "Wind Spirit Deer", "Secret" }, { "Godly Owl", "Secret" } } },
+	{ Name = "Halloween Town", Icon = "🎃", Floor = Color3.fromHex("3A2A4A"), Wall = Color3.fromHex("2A1A2A"), Top = Color3.fromHex("FF8A1C"),
+		Sky = Color3.fromHex("C88AFF"),
+		Animals = { { "Bat", "Common" }, { "Black Cat", "Uncommon" }, { "Zombie Dog", "Rare" }, { "Ghost", "Epic" },
+			{ "Pumpkin Reaper", "Secret" }, { "Phantom Bunny", "Secret" }, { "Nightmare Owl", "Secret" }, { "Zombie Bear", "Secret" }, { "Reaper Raven", "Secret" }, { "Haunted Doll Cat", "Secret" } } },
+	{ Name = "Tropical Paradise", Icon = "🏝️", Floor = Color3.fromHex("F0E0A0"), Wall = Color3.fromHex("3CB4A8"), Top = Color3.fromHex("4CD964"),
+		Sky = Color3.fromHex("A0F0E0"),
+		Animals = { { "Crab", "Common" }, { "Flamingo", "Uncommon" }, { "Toucan", "Rare" }, { "Sea Lion", "Epic" },
+			{ "Tropical Phoenix", "Secret" }, { "Bubblegum Flamingo", "Secret" }, { "Watermelon Turtle", "Secret" }, { "Chocolate Crocodile", "Secret" } } },
+	{ Name = "Toy Factory", Icon = "🧸", Floor = Color3.fromHex("9AA4B2"), Wall = Color3.fromHex("5A6070"), Top = Color3.fromHex("FFC21C"),
+		Sky = Color3.fromHex("FFE8B0"),
+		Animals = { { "Wind-Up Mouse", "Uncommon" }, { "Plush Bear", "Rare" }, { "Robot Rabbit", "Epic" },
+			{ "Ultimate Toymaster", "Secret" }, { "Space Hamster", "Secret" }, { "Mecha Spider", "Secret" }, { "Mecha Lion", "Secret" }, { "Pizza Cat", "Secret" }, { "Marshmallow Sheep", "Secret" } } },
+	{ Name = "Ice Age", Icon = "🧊", Floor = Color3.fromHex("DCEEFF"), Wall = Color3.fromHex("6A9ACA"), Top = Color3.fromHex("F4FAFF"),
+		Sky = Color3.fromHex("C8E8FF"),
+		Animals = { { "Giant Sloth", "Rare" }, { "Mammoth", "Epic" }, { "Saber-Tooth Tiger", "Legendary" },
+			{ "Frozen Mammoth King", "Secret" }, { "Frost Saber", "Secret" }, { "Ice Cream Penguin", "Secret" } } },
+	{ Name = "Mushroom Kingdom", Icon = "🍄", Floor = Color3.fromHex("4A8A3A"), Wall = Color3.fromHex("5A3A6A"), Top = Color3.fromHex("E8401C"),
+		Sky = Color3.fromHex("E0C8FF"),
+		Animals = { { "Forest Mouse", "Rare" }, { "Snail", "Epic" }, { "Mushroom Frog", "Legendary" },
+			{ "Mycelium Dragon", "Secret" }, { "Crystal Butterfly", "Secret" } } },
+	{ Name = "Heaven's Gate", Icon = "👼", Floor = Color3.fromHex("FFF4D8"), Wall = Color3.fromHex("E8D8A0"), Top = Color3.fromHex("FFE45C"),
+		Sky = Color3.fromHex("FFF8D8"),
+		Animals = { { "Celestial Deer", "Epic" }, { "Golden Eagle", "Legendary" }, { "Angelic Lion", "Mythic" },
+			{ "Divine Seraphim", "Secret" }, { "Celestial Emperor", "Secret" }, { "Infinity Serpent", "Secret" }, { "Infinity Dragon", "Secret" }, { "Eternal Wolf", "Secret" } } },
+	{ Name = "Underworld", Icon = "🔥", Floor = Color3.fromHex("2A0A0A"), Wall = Color3.fromHex("1C0A0A"), Top = Color3.fromHex("FF3B1C"),
+		Sky = Color3.fromHex("FF8A6A"),
+		Animals = { { "Demon Bat", "Legendary" }, { "Hellhound", "Mythic" }, { "Cursed Dragon", "Mythic" },
+			{ "World Ender", "Secret" }, { "Demon Dragon", "Secret" }, { "Magma Phoenix", "Secret" }, { "Void Creature", "Secret" } } },
 }
 
 -- Map layout (studs). The generator in tools/build_place.py uses the same numbers.
@@ -74,6 +123,17 @@ Config.Toys = {
 	{ Name = "Toy Rocket", Rarity = "Epic", Price = 60e6, Luck = 6 },
 	{ Name = "Robot Toy", Rarity = "Legendary", Price = 1e9, Luck = 9 },
 	{ Name = "Crystal Orb", Rarity = "Mythic", Price = 20e9, Luck = 15 },
+	{ Name = "Meteor Ball", Rarity = "Mythic", Price = 400e9, Luck = 22 },
+	{ Name = "Dragon Plush", Rarity = "Mythic", Price = 8e12, Luck = 30 },
+	{ Name = "Galaxy Orb", Rarity = "Mythic", Price = 150e12, Luck = 42 },
+	{ Name = "Prismatic Frisbee", Rarity = "Mythic", Price = 3e15, Luck = 58 },
+	{ Name = "Void Orb", Rarity = "Exclusive", Price = 60e15, Luck = 80 },
+	{ Name = "Phoenix Feather", Rarity = "Exclusive", Price = 1.2e18, Luck = 110 },
+	{ Name = "King's Ball", Rarity = "Exclusive", Price = 25e18, Luck = 150 },
+	{ Name = "Floating Crystal", Rarity = "Exclusive", Price = 500e18, Luck = 200 },
+	{ Name = "Thunder Bolt", Rarity = "Secret", Price = 1e22, Luck = 270 },
+	{ Name = "Galaxy Destroyer", Rarity = "Secret", Price = 2e23, Luck = 360 },
+	{ Name = "Infinity Sphere", Rarity = "Secret", Price = 5e24, Luck = 500 },
 }
 
 -- Pull-up bar levels: power gained per rep.
@@ -86,6 +146,10 @@ Config.Bars = {
 	{ Price = 15e6, PerRep = 120, Color = Color3.fromRGB(190, 70, 255) },
 	{ Price = 250e6, PerRep = 300, Color = Color3.fromRGB(60, 230, 255) },
 	{ Price = 5e9, PerRep = 800, Color = Color3.fromRGB(255, 70, 200) },
+	{ Price = 150e9, PerRep = 2500, Color = Color3.fromRGB(255, 200, 40) },
+	{ Price = 5e12, PerRep = 8000, Color = Color3.fromRGB(110, 230, 255) },
+	{ Price = 200e12, PerRep = 25000, Color = Color3.fromRGB(255, 120, 200) },
+	{ Price = 8e15, PerRep = 80000, Color = Color3.fromRGB(255, 255, 255) },
 }
 Config.RepSeconds = 0.6
 
@@ -117,8 +181,9 @@ Config.SecretChance = 1 / 10000 -- per throw, for EACH Secret pet in the zone; l
 Config.SecretSeconds = 3.2 -- a Secret's Blender cinematic runs this much longer than a normal reveal (replaces OneInSeconds)
 
 function Config.FlightTime(distance: number): number
-	return 1.4 + distance / 230
+	return 1.2 + math.sqrt(distance) / 9 -- grows slower than distance: ~3s for one zone, ~8s across all 18
 end
+assert(math.abs(Config.FlightTime(4140) - 8.35) < 0.05, "FlightTime self-check failed")
 
 -- Monetization. Set these after creating the products on the Creator Dashboard (0 = hidden).
 Config.LuckProductId = 0 -- developer product: 100x luck for 15 minutes
