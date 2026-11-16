@@ -475,36 +475,53 @@ def cliff_side(g, Z, side, z0, z1):
 
 # ---------------- BASE PLAZA ----------------
 base = mapm.add(Item("Model", "Base"))
-for i in range(-6, 7):  # checker plaza floor
-    for j in range(-5, 5):
+YARD_X, YARD_Z0, YARD_Z1 = 160, -70, 72  # courtyard: x in [-160, 160], z from the runway mouth to behind the plots
+for i in range(-8, 8):  # checker yard floor
+    for j in range(7):
         c = "62CE48" if (i + j) % 2 == 0 else "58BE40"
-        base.add(part("Floor", (20, 2, 20), (i * 20, -1, 30 + j * 20 + 10), c))
-base.add(part("Path", (40, 0.2, 170), (0, 0.1, 45), "E8D9A8", collide=False))
-for k in range(-8, 9):
-    base.add(part("PathEdge", (1, 0.3, 9), (-20.5, 0.15, 45 + k * 10), "C9B888", collide=False))
-    base.add(part("PathEdge", (1, 0.3, 9), (20.5, 0.15, 45 + k * 10), "C9B888", collide=False))
-for side in (-1, 1):
-    for k in range(10):
-        zc = 125 - k * 20
-        h = rnd.uniform(20, 28)
-        base.add(part("Wall", (20, h, 20), (side * 140, h / 2, zc), shade("96623C", rnd.uniform(0.9, 1.06))))
-        base.add(part("WallTop", (22, 3, 20), (side * 140, h + 1.5, zc), shade("78DC50", rnd.uniform(0.95, 1.05))))
-for k in range(15):
-    h = rnd.uniform(20, 28)
-    base.add(part("Wall", (20, h, 20), (-140 + k * 20, h / 2, 140), shade("96623C", rnd.uniform(0.9, 1.06))))
-    base.add(part("WallTop", (20, 3, 22), (-140 + k * 20, h + 1.5, 140), shade("78DC50", rnd.uniform(0.95, 1.05))))
-for side in (-1, 1):
-    for k in range(5):
-        h = rnd.uniform(20, 28)
-        base.add(part("Wall", (20, h, 10), (side * (45 + k * 20), h / 2, -70), shade("96623C", rnd.uniform(0.9, 1.06))))
-        base.add(part("WallTop", (20, 3, 12), (side * (45 + k * 20), h + 1.5, -70), shade("78DC50", rnd.uniform(0.95, 1.05))))
-for _ in range(22):
-    side = rnd.choice((-1, 1))
-    theme_prop(base, "backyard", side * rnd.uniform(108, 126), rnd.uniform(-55, 125))
-for x in (-30, 30):
-    for z in (-40, 10, 60, 110):
-        base.add(part("LampPost", (0.8, 9, 0.8), (x, 4.5, z), "3A3A48"))
-        base.add(part("Lamp", (1.8, 1.8, 1.8), (x, 9.5, z), "FFE9A0", kind="neon"))
+        base.add(part("Floor", (20, 2, 20.3), (i * 20 + 10, -1, YARD_Z0 + 10 + j * 20.3), c))
+for k in range(-2, 2):  # orange checker launch strip at the runway mouth
+    for r in range(2):
+        c = "FF9A2E" if (k + r) % 2 == 0 else "FFB54A"
+        base.add(part("LaunchStrip", (17, 0.3, 4), (k * 17 + 8.5, 0.15, -60 - r * 4), c, collide=False))
+
+
+def terrace(g, x, z, sx, sz):
+    """Two-step grass terrace block (dirt sides, grass cap) like the reference's yard walls."""
+    h = rnd.uniform(9, 13)
+    g.add(part("Wall", (sx, h, sz), (x, h / 2, z), shade("96623C", rnd.uniform(0.9, 1.06))))
+    g.add(part("WallTop", (sx + 0.4, 2, sz + 0.4), (x, h + 1, z), shade("78DC50", rnd.uniform(0.95, 1.05))))
+    return h
+
+
+for side in (-1, 1):  # side walls: low step, then a tall step behind
+    for k in range(8):
+        zc = YARD_Z0 + 10 + k * 20
+        terrace(base, side * (YARD_X + 6), zc, 12, 20)
+        h = rnd.uniform(24, 32)
+        base.add(part("Wall", (24, h, 20), (side * (YARD_X + 24), h / 2, zc), shade("96623C", rnd.uniform(0.9, 1.06))))
+        base.add(part("WallTop", (24.4, 3, 20.4), (side * (YARD_X + 24), h + 1.5, zc), shade("78DC50", rnd.uniform(0.95, 1.05))))
+for k in range(-9, 9):  # back wall behind the plots
+    xc = k * 20 + 10
+    terrace(base, xc, YARD_Z1 + 6, 20, 12)
+    h = rnd.uniform(24, 32)
+    base.add(part("Wall", (20, h, 24), (xc, h / 2, YARD_Z1 + 24), shade("96623C", rnd.uniform(0.9, 1.06))))
+    base.add(part("WallTop", (20.4, 3, 24.4), (xc, h + 1.5, YARD_Z1 + 24), shade("78DC50", rnd.uniform(0.95, 1.05))))
+for side in (-1, 1):  # front wall either side of the runway mouth
+    for k in range(7):
+        xc = side * (44 + k * 20)
+        h = rnd.uniform(22, 30)
+        base.add(part("Wall", (20, h, 12), (xc, h / 2, -76), shade("96623C", rnd.uniform(0.9, 1.06))))
+        base.add(part("WallTop", (20.4, 3, 12.4), (xc, h + 1.5, -76), shade("78DC50", rnd.uniform(0.95, 1.05))))
+for _ in range(30):  # trees/bushes up on the terraces
+    if rnd.random() < 0.5:
+        side = rnd.choice((-1, 1))
+        theme_prop(base, "backyard", side * rnd.uniform(YARD_X + 14, YARD_X + 34), rnd.uniform(YARD_Z0, YARD_Z1 + 20), 30)
+    else:
+        theme_prop(base, "backyard", rnd.uniform(-170, 170), rnd.uniform(YARD_Z1 + 14, YARD_Z1 + 34), 30)
+for x in (-110, -40, 40, 110):  # lamps along the open middle of the yard
+    base.add(part("LampPost", (0.8, 9, 0.8), (x, 4.5, -20), "3A3A48"))
+    base.add(part("Lamp", (1.8, 1.8, 1.8), (x, 9.5, -20), "FFE9A0", kind="neon"))
 # title arch over the canyon mouth
 for side in (-1, 1):
     base.add(part("ArchPillar", (4, 50, 4), (side * 33, 25, -68), "FF8A1C"))
@@ -513,13 +530,13 @@ base.add(part("TitleBoard", (60, 8, 2), (0, 52, -68), "FF5CA8"))  # high enough 
 base.add(part("TitleTrim", (62, 1, 2.4), (0, 47.6, -68), "FFD23C"))
 base.add(part("TitleTrim", (62, 1, 2.4), (0, 56.4, -68), "FFD23C"))
 
-spawn = part("SpawnLocation", (12, 1, 12), (0, 0.5, 118), "FFFFFF", cls="SpawnLocation")
+spawn = part("SpawnLocation", (12, 1, 12), (0, 0.5, -10), "FFFFFF", cls="SpawnLocation")
 spawn.raw('<bool name="Neutral">true</bool>').raw('<int name="Duration">0</int>')
 mapm.add(spawn)
 mapm.add(part("ThrowLine", (68, 0.3, 1.5), (0, 0.15, -66.5), "FFFFFF", kind="neon", collide=False))
 
 sell = mapm.add(Item("Model", "SellStand"))
-sx0, sz0 = 26, -52
+sx0, sz0 = 58, -50  # front-right of the yard, by the runway
 sell.add(part("Counter", (10, 4, 4), (sx0, 2, sz0), "F4F4F4"))
 sell.add(part("CounterStripe", (10.1, 1, 4.1), (sx0, 3, sz0), "E23B3B"))
 for k in (-4.5, 4.5):
@@ -532,7 +549,7 @@ for i, c in enumerate(("FFC93C", "FFD84A", "FFC93C")):
 
 # ---------------- TOY SHOP: blue/white stall + classic Noob vendor ----------------
 shop = mapm.add(Item("Model", "ToyShop"))
-hx, hz = -27.5, -50
+hx, hz = -58, -50  # front-left of the yard, by the runway
 shop.add(part("Counter", (3, 3.4, 10), (hx, 1.7, hz), "F4F4F4"))
 shop.add(part("CounterStripe", (3.1, 0.9, 10.1), (hx, 2.6, hz), "2F7BE8"))
 for dz in (-4.6, 4.6):
@@ -575,42 +592,42 @@ vendor.add(part("Right Leg", (1, 2, 1), V(0.5, 1, 0), GRN, rot=vr, variant=None)
 # ---------------- PLOTS ----------------
 plots = mapm.add(Item("Folder", "Plots"))
 idx = 0
-for side, rot in ((-1, math.pi / 2), (1, -math.pi / 2)):
-    for z in (0, 50, 100):
+for px in (-130, -78, -26, 26, 78, 130):
+    for rot in (math.pi,):  # local +z (the pen's open front) faces the runway (-z)
         idx += 1
-        o = (side * 72, 0, z)
+        o = (px, 0, 42)
         pm = plots.add(Item("Model", f"Plot{idx}"))
         L = lambda lx, ly, lz: tf(o, rot, lx, ly, lz)
-        pm.add(part("Floor", (46, 0.4, 60), L(0, 0.2, 0), "4FB83A", rot=rot))
-        pm.add(part("Border", (48, 0.3, 62), L(0, 0.05, 0), "E8D9A8", rot=rot, collide=False))
+        pm.add(part("Floor", (46, 0.4, 46), L(0, 0.2, 0), "4FB83A", rot=rot))
+        pm.add(part("Border", (48, 0.3, 48), L(0, 0.05, 0), "E8D9A8", rot=rot, collide=False))
         for lx in (-23.5, 23.5):
-            pm.add(part("Fence", (0.6, 0.6, 60), L(lx, 2.2, 0), "C8935A", rot=rot))
-            pm.add(part("Fence", (0.6, 0.6, 60), L(lx, 1.1, 0), "C8935A", rot=rot))
-            for lz in range(-30, 31, 6):
+            pm.add(part("Fence", (0.6, 0.6, 46), L(lx, 2.2, 0), "C8935A", rot=rot))
+            pm.add(part("Fence", (0.6, 0.6, 46), L(lx, 1.1, 0), "C8935A", rot=rot))
+            for lz in (-23, -17.25, -11.5, -5.75, 0, 5.75, 11.5, 17.25, 23):
                 pm.add(part("FencePost", (0.9, 3, 0.9), L(lx, 1.5, lz), "A8703C", rot=rot))
                 pm.add(part("PostCap", (1.1, 0.4, 1.1), L(lx, 3.2, lz), "C8935A", rot=rot))
-            for lz in range(-27, 28, 9):  # flower bed along the fence
+            for lz in (-20, -11, -2, 7, 16):  # flower bed along the fence
                 c = rnd.choice(["FF5C8A", "FFD23C", "B46CFF", "FF8A3C"])
                 pm.add(part("Flower", (0.8, 0.8, 0.8), L(lx - 1.4 * (1 if lx > 0 else -1), 0.8, lz), c, rot=rot, collide=False))
                 pm.add(part("Leaf", (1.2, 0.5, 1.2), L(lx - 1.4 * (1 if lx > 0 else -1), 0.45, lz), "3C9A3C", rot=rot, collide=False))
-        pm.add(part("Fence", (47, 0.6, 0.6), L(0, 2.2, -30), "C8935A", rot=rot))
-        pm.add(part("Fence", (47, 0.6, 0.6), L(0, 1.1, -30), "C8935A", rot=rot))
-        bush(pm, *L(-18, 0, -27)[0::2])
-        bush(pm, *L(18, 0, -27)[0::2])
-        pm.add(part("Spawn", (6, 0.2, 6), L(0, 0.5, 22), "FFFFFF", rot=rot, collide=False, transparency=0.6))
+        pm.add(part("Fence", (47, 0.6, 0.6), L(0, 2.2, -23), "C8935A", rot=rot))
+        pm.add(part("Fence", (47, 0.6, 0.6), L(0, 1.1, -23), "C8935A", rot=rot))
+        bush(pm, *L(-18, 0, -20)[0::2])
+        bush(pm, *L(18, 0, -20)[0::2])
+        pm.add(part("Spawn", (6, 0.2, 6), L(0, 0.5, 14), "FFFFFF", rot=rot, collide=False, transparency=0.6))
         for lx in (-6, 6):
-            pm.add(part("SignPost", (0.8, 8, 0.8), L(lx, 4, 29), "A8703C", rot=rot))
-        pm.add(part("OwnerSign", (14, 3, 0.8), L(0, 8, 29), "FFC93C", rot=rot))
-        pm.add(part("OwnerTrim", (14.4, 0.4, 1.0), L(0, 9.6, 29), "FF8A1C", rot=rot))
-        pm.add(part("SlotSign", (5, 4, 0.6), L(-16, 2.5, 25), "FFFFFF", rot=rot))
-        pm.add(part("SlotSignStripe", (5.1, 0.8, 0.7), L(-16, 4.1, 25), "4CC84A", rot=rot))
+            pm.add(part("SignPost", (0.8, 8, 0.8), L(lx, 4, 24), "A8703C", rot=rot))
+        pm.add(part("OwnerSign", (14, 3, 0.8), L(0, 8, 24), "FFC93C", rot=rot))
+        pm.add(part("OwnerTrim", (14.4, 0.4, 1.0), L(0, 9.6, 24), "FF8A1C", rot=rot))
+        pm.add(part("SlotSign", (5, 4, 0.6), L(-16, 2.5, 20), "FFFFFF", rot=rot))
+        pm.add(part("SlotSignStripe", (5.1, 0.8, 0.7), L(-16, 4.1, 20), "4CC84A", rot=rot))
         for lx in (12, 20):
-            pm.add(part("BarFrame", (1, 10, 1), L(lx, 5, 12), "4656C8", rot=rot))
-            pm.add(part("BarFoot", (2, 0.6, 2), L(lx, 0.3, 12), "2A2A3A", rot=rot))
-        pm.add(part("BarFrame", (9, 0.8, 0.8), L(16, 9.6, 12), "4656C8", rot=rot))
-        pm.add(part("BarGlow", (7, 0.4, 0.4), L(16, 9.6, 12.5), "FFFFFF", kind="neon", rot=rot, collide=False))
-        pm.add(part("TrainSpot", (2, 2, 1), L(16, 6.2, 13), "FFFFFF", rot=rot, collide=False, transparency=1))
-        pm.add(part("UpgradePad", (6, 0.4, 6), L(16, 0.5, 22), "FFC93C", kind="neon", rot=rot, collide=False))
+            pm.add(part("BarFrame", (1, 10, 1), L(lx, 5, 30), "4656C8", rot=rot))
+            pm.add(part("BarFoot", (2, 0.6, 2), L(lx, 0.3, 30), "2A2A3A", rot=rot))
+        pm.add(part("BarFrame", (9, 0.8, 0.8), L(16, 9.6, 30), "4656C8", rot=rot))
+        pm.add(part("BarGlow", (7, 0.4, 0.4), L(16, 9.6, 30.5), "FFFFFF", kind="neon", rot=rot, collide=False))
+        pm.add(part("TrainSpot", (2, 2, 1), L(16, 6.2, 31), "FFFFFF", rot=rot, collide=False, transparency=1))
+        pm.add(part("UpgradePad", (6, 0.4, 6), L(16, 0.5, 38), "FFC93C", kind="neon", rot=rot, collide=False))
 
 # ---------------- CORRIDOR ----------------
 cor = mapm.add(Item("Model", "Corridor"))
