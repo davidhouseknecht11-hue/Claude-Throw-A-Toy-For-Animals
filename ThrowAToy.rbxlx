@@ -328953,12 +328953,12 @@ local function bestRegularIncome(d): number
 	return best
 end
 
--- give Exclusives without a locked income one (hatch, and saves from before this rule)
+-- Exclusives follow your current best regular animal; re-run whenever animals change (pushData, renderPlot)
 local function lockExclusives(d)
 	local best
 	for _, a in d.Animals do
 		local info = Config.AnimalInfo[a.Name]
-		if info and info.Bonus and not a.Base then
+		if info and info.Bonus then
 			best = best or bestRegularIncome(d)
 			a.Base = best * (1 + info.Bonus)
 		end
@@ -328973,7 +328973,7 @@ do -- self-check: +700% on a $100/s best is $800/s, and other Exclusives don't c
 	d.Animals[1].Base = nil
 	local best = bestRegularIncome(d)
 	lockExclusives(d)
-	assert(math.abs(d.Animals[3].Base - best * 1.5) < 1e-6 and d.Animals[2].Base == 1e9, "Exclusive bonus self-check failed")
+	assert(math.abs(d.Animals[3].Base - best * 1.5) < 1e-6 and math.abs(d.Animals[2].Base - best * 8) < 1e-6, "Exclusive bonus self-check failed")
 end
 
 local function indexBonus(d): number
@@ -329080,6 +329080,7 @@ local function renderPlot(prof)
 	if not plot then
 		return
 	end
+	lockExclusives(prof.Data)
 	local pets = plot:FindFirstChild("Pets") or Instance.new("Folder")
 	pets.Name = "Pets"
 	pets.Parent = plot
@@ -329177,6 +329178,7 @@ local function pushData(player: Player)
 		return
 	end
 	local d = prof.Data
+	lockExclusives(d)
 	player:SetAttribute("Cash", d.Cash)
 	player:SetAttribute("Power", d.Power)
 	player:SetAttribute("Income", totalIncome(prof))
@@ -329972,10 +329974,6 @@ local function hatch(player: Player, prof, egg, count: number)
 		end
 		local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size, Mutation = mut, Placed = false }
 		d.Index[pick[1]] = true
-		local info = Config.AnimalInfo[pick[1]]
-		if info and info.Bonus then
-			animal.Base = bestRegularIncome(d) * (1 + info.Bonus)
-		end
 		addAnimal(player, animal)
 		table.insert(results, { Name = animal.Name, Size = size, Mutation = mut, Odds = math.max(1, math.floor(1 / chance + 0.5)) })
 	end
