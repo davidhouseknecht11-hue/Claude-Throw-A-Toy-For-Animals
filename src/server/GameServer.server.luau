@@ -619,15 +619,15 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 		table.insert(a[2] == "Secret" and secrets or regular, a)
 	end
 	local pAny = 1 - (1 - #secrets * Config.SecretChance) ^ rolls -- chance any Secret comes, after the best-of rolls
-	local pick, pA
+	local pick, pA -- pA: chance of this animal on a normal throw (the "1 in X" always shows normal odds)
 	if #secrets > 0 and rng:NextNumber() < pAny then
-		pick, pA = secrets[rng:NextInteger(1, #secrets)], pAny / #secrets
+		pick, pA = secrets[rng:NextInteger(1, #secrets)], Config.SecretChance
 	else
 		pick, pA = Util.Pick(regular, function(a)
 			local ri = Config.RarityIndex[a[2]]
 			return Config.Rarities[ri].Weight * luck ^ ((ri - 1) / 5)
 		end, rng)
-		pA *= 1 - pAny
+		pA *= 1 - #secrets * Config.SecretChance
 	end
 	local luckSoft = math.min(luck, 60)
 	local function rollBest(list, weightOf)
@@ -636,9 +636,10 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 			w[i] = weightOf(it)
 		end
 		local p = Config.BestOf(w, rolls)
-		return Util.Pick(list, function(it)
+		local item = Util.Pick(list, function(it)
 			return p[table.find(list, it) :: number]
 		end, rng)
+		return item, Config.BestOf(w, 1)[table.find(list, item) :: number] -- normal (1 roll) chance of what came
 	end
 	local size, pS = rollBest(Config.Sizes, function(s)
 		return s.Chance * (s.Name ~= "Normal" and luckSoft ^ 0.15 or 1)
@@ -646,7 +647,7 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	local mut, pM = rollBest(Config.Mutations, function(m)
 		return m.Chance * (m.Name ~= "None" and luckSoft ^ 0.2 or 1)
 	end)
-	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation, at this luck
+	local odds = math.max(1, math.floor(1 / (pA * pS * pM) + 0.5)) -- this exact animal + size + mutation at this luck, as on a normal throw (lucky throws show the regular odds)
 	local secret = pick[2] == "Secret"
 	local oneIn = mut.Name ~= "None" or secret -- mutations and secrets get the "1 in X" reveal
 	local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size.Name, Mutation = mut.Name, Placed = false }
