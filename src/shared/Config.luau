@@ -13,14 +13,14 @@ Config.Rarities = {
 	{ Name = "Secret", Color = Color3.fromRGB(215, 20, 55), Weight = 0, Mult = 500 }, -- rolled separately: Config.SecretChance
 }
 
--- Enchanted Egg exclusives: earn like a Fantasy-zone pet x Exclusive rarity x Boost (a Void Kitsune out-earns ~100 Mythics).
+-- Enchanted Egg exclusives earn your best (non-Exclusive) animal's income + Bonus, locked in when hatched.
 Config.Exclusives = {
-	{ Name = "Crystal Bunny", Chance = 35, Boost = 1 },
-	{ Name = "Nebula Fox", Chance = 30, Boost = 1.5 },
-	{ Name = "Angel Pup", Chance = 20, Boost = 2.5 },
-	{ Name = "Lava Tiger", Chance = 10, Boost = 4 },
-	{ Name = "Rainbow Pegacorn", Chance = 4, Boost = 8 },
-	{ Name = "Void Kitsune", Chance = 1, Boost = 20 },
+	{ Name = "Crystal Bunny", Chance = 35, Bonus = 0.5 }, -- +50%
+	{ Name = "Nebula Fox", Chance = 30, Bonus = 1 }, -- +100%
+	{ Name = "Angel Pup", Chance = 20, Bonus = 2 }, -- +200%
+	{ Name = "Lava Tiger", Chance = 10, Bonus = 3 }, -- +300%
+	{ Name = "Rainbow Pegacorn", Chance = 4, Bonus = 5 }, -- +500%
+	{ Name = "Void Kitsune", Chance = 1, Bonus = 7 }, -- +700%
 }
 Config.RarityIndex = {} :: { [string]: number }
 for i, r in Config.Rarities do
@@ -290,14 +290,14 @@ function Config.BaseIncome(zoneIndex: number, rarity: string): number
 end
 
 -- name -> {Zone = index, Rarity = name}
-Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string, Boost: number? } }
+Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string, Bonus: number? } }
 for zi, z in Config.Zones do
 	for _, a in z.Animals do
 		Config.AnimalInfo[a[1]] = { Zone = zi, Rarity = a[2] }
 	end
 end
 for _, e in Config.Exclusives do
-	Config.AnimalInfo[e.Name] = { Zone = #Config.Zones, Rarity = "Exclusive", Boost = e.Boost }
+	Config.AnimalInfo[e.Name] = { Zone = #Config.Zones, Rarity = "Exclusive", Bonus = e.Bonus }
 end
 Config.ToyInfo = {} :: { [string]: any }
 for i, t in Config.Toys do

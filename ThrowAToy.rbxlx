@@ -229627,14 +229627,14 @@ Config.Rarities = {
 	{ Name = "Secret", Color = Color3.fromRGB(215, 20, 55), Weight = 0, Mult = 500 }, -- rolled separately: Config.SecretChance
 }
 
--- Enchanted Egg exclusives: earn like a Fantasy-zone pet x Exclusive rarity x Boost (a Void Kitsune out-earns ~100 Mythics).
+-- Enchanted Egg exclusives earn your best (non-Exclusive) animal's income + Bonus, locked in when hatched.
 Config.Exclusives = {
-	{ Name = "Crystal Bunny", Chance = 35, Boost = 1 },
-	{ Name = "Nebula Fox", Chance = 30, Boost = 1.5 },
-	{ Name = "Angel Pup", Chance = 20, Boost = 2.5 },
-	{ Name = "Lava Tiger", Chance = 10, Boost = 4 },
-	{ Name = "Rainbow Pegacorn", Chance = 4, Boost = 8 },
-	{ Name = "Void Kitsune", Chance = 1, Boost = 20 },
+	{ Name = "Crystal Bunny", Chance = 35, Bonus = 0.5 }, -- +50%
+	{ Name = "Nebula Fox", Chance = 30, Bonus = 1 }, -- +100%
+	{ Name = "Angel Pup", Chance = 20, Bonus = 2 }, -- +200%
+	{ Name = "Lava Tiger", Chance = 10, Bonus = 3 }, -- +300%
+	{ Name = "Rainbow Pegacorn", Chance = 4, Bonus = 5 }, -- +500%
+	{ Name = "Void Kitsune", Chance = 1, Bonus = 7 }, -- +700%
 }
 Config.RarityIndex = {} :: { [string]: number }
 for i, r in Config.Rarities do
@@ -229904,14 +229904,14 @@ function Config.BaseIncome(zoneIndex: number, rarity: string): number
 end
 
 -- name -> {Zone = index, Rarity = name}
-Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string, Boost: number? } }
+Config.AnimalInfo = {} :: { [string]: { Zone: number, Rarity: string, Bonus: number? } }
 for zi, z in Config.Zones do
 	for _, a in z.Animals do
 		Config.AnimalInfo[a[1]] = { Zone = zi, Rarity = a[2] }
 	end
 end
 for _, e in Config.Exclusives do
-	Config.AnimalInfo[e.Name] = { Zone = #Config.Zones, Rarity = "Exclusive", Boost = e.Boost }
+	Config.AnimalInfo[e.Name] = { Zone = #Config.Zones, Rarity = "Exclusive", Bonus = e.Bonus }
 end
 Config.ToyInfo = {} :: { [string]: any }
 for i, t in Config.Toys do
@@ -328905,7 +328905,7 @@ end
 local rng = Random.new()
 local Profiles = {} -- [Player] = profile
 
-type Animal = { Id: string, Name: string, Size: string, Mutation: string, Placed: boolean }
+type Animal = { Id: string, Name: string, Size: string, Mutation: string, Placed: boolean, Base: number? } -- Base: Exclusive's locked income
 
 local function defaultData()
 	return {
@@ -328933,9 +328933,47 @@ local function animalIncome(a: Animal): number
 	if not info then
 		return 0
 	end
+	if a.Base then
+		return a.Base
+	end
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 	local mut = Config.Find(Config.Mutations, a.Mutation) or Config.Mutations[1]
-	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult * (info.Boost or 1)
+	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult
+end
+
+-- Exclusives key off the best non-Exclusive so a 10-pack can't compound on itself.
+local function bestRegularIncome(d): number
+	local best = Config.BaseIncome(1, "Mythic") -- floor for brand-new players
+	for _, a in d.Animals do
+		local info = Config.AnimalInfo[a.Name]
+		if info and not info.Bonus then
+			best = math.max(best, animalIncome(a))
+		end
+	end
+	return best
+end
+
+-- give Exclusives without a locked income one (hatch, and saves from before this rule)
+local function lockExclusives(d)
+	local best
+	for _, a in d.Animals do
+		local info = Config.AnimalInfo[a.Name]
+		if info and info.Bonus and not a.Base then
+			best = best or bestRegularIncome(d)
+			a.Base = best * (1 + info.Bonus)
+		end
+	end
+end
+do -- self-check: +700% on a $100/s best is $800/s, and other Exclusives don't count as "best"
+	local d = { Animals = {
+		{ Id = "a", Name = Config.Zones[1].Animals[1][1], Size = Config.Sizes[1].Name, Mutation = Config.Mutations[1].Name, Placed = false, Base = 100 },
+		{ Id = "b", Name = "Void Kitsune", Size = "", Mutation = "", Placed = false, Base = 1e9 },
+		{ Id = "c", Name = "Crystal Bunny", Size = "", Mutation = "", Placed = false },
+	} }
+	d.Animals[1].Base = nil
+	local best = bestRegularIncome(d)
+	lockExclusives(d)
+	assert(math.abs(d.Animals[3].Base - best * 1.5) < 1e-6 and d.Animals[2].Base == 1e9, "Exclusive bonus self-check failed")
 end
 
 local function indexBonus(d): number
@@ -329823,6 +329861,7 @@ Players.PlayerAdded:Connect(function(player)
 		return
 	end
 	local prof = { Data = d, Plot = assignPlot(player), Busy = false, Training = false, CanSave = loaded, Passes = {} }
+	lockExclusives(prof.Data)
 	Profiles[player] = prof
 	if not loaded then
 		-- never overwrite a save we failed to read
@@ -329933,6 +329972,10 @@ local function hatch(player: Player, prof, egg, count: number)
 		end
 		local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size, Mutation = mut, Placed = false }
 		d.Index[pick[1]] = true
+		local info = Config.AnimalInfo[pick[1]]
+		if info and info.Bonus then
+			animal.Base = bestRegularIncome(d) * (1 + info.Bonus)
+		end
 		addAnimal(player, animal)
 		table.insert(results, { Name = animal.Name, Size = size, Mutation = mut, Odds = math.max(1, math.floor(1 / chance + 0.5)) })
 	end
@@ -330581,7 +330624,9 @@ for i, egg in Config.Shop.Eggs do
 		local odds = {}
 		for _, e in egg.Pool do
 			local rc = Config.Rarities[Config.RarityIndex[Config.AnimalInfo[e[1]].Rarity]].Color
-			table.insert(odds, string.format('<font color="#%s">%s</font>  %g%%', rc:ToHex(), e[1], math.floor(e[2] / total * 1000 + 0.5) / 10))
+			local bonus = Config.AnimalInfo[e[1]].Bonus
+			table.insert(odds, string.format('<font color="#%s">%s</font>  %g%%%s', rc:ToHex(), e[1], math.floor(e[2] / total * 1000 + 0.5) / 10,
+				bonus and string.format('  <font color="#7CFF6B">+%d%%</font>', bonus * 100) or ""))
 		end
 		local oddsBox = make("Frame", rect({ BackgroundColor3 = C.Dark, BackgroundTransparency = 0.08, Visible = false, ZIndex = 5, Parent = f }, 760, 74, 350, 240, W, H), { corner(12), stroke(3) })
 		label({ Text = table.concat(odds, "\n"), Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Left, Parent = oddsBox })
@@ -330592,7 +330637,7 @@ for i, egg in Config.Shop.Eggs do
 		local chips = {
 			{ #egg.Pool .. " EXCLUSIVE PETS", "Only in this egg" },
 			{ string.format("%g%% %s", rarest[2] / total * 100, Config.AnimalInfo[rarest[1]].Rarity:upper()), "Chase the rarest" },
-			{ "LIMITED DROP", "Get it before it's gone" },
+			{ string.format("UP TO +%d%%", (Config.AnimalInfo[rarest[1]].Bonus or 0) * 100), "Better than your best pet" },
 		}
 		for k, chip in chips do
 			local cf = make("Frame", rect({ BackgroundColor3 = Color3.fromRGB(60, 20, 120), BackgroundTransparency = 0.45, Parent = f }, 326 + (k - 1) * 261, 130, 245, 71, W, H),

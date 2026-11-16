@@ -554,7 +554,9 @@ for i, egg in Config.Shop.Eggs do
 		local odds = {}
 		for _, e in egg.Pool do
 			local rc = Config.Rarities[Config.RarityIndex[Config.AnimalInfo[e[1]].Rarity]].Color
-			table.insert(odds, string.format('<font color="#%s">%s</font>  %g%%', rc:ToHex(), e[1], math.floor(e[2] / total * 1000 + 0.5) / 10))
+			local bonus = Config.AnimalInfo[e[1]].Bonus
+			table.insert(odds, string.format('<font color="#%s">%s</font>  %g%%%s', rc:ToHex(), e[1], math.floor(e[2] / total * 1000 + 0.5) / 10,
+				bonus and string.format('  <font color="#7CFF6B">+%d%%</font>', bonus * 100) or ""))
 		end
 		local oddsBox = make("Frame", rect({ BackgroundColor3 = C.Dark, BackgroundTransparency = 0.08, Visible = false, ZIndex = 5, Parent = f }, 760, 74, 350, 240, W, H), { corner(12), stroke(3) })
 		label({ Text = table.concat(odds, "\n"), Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.05, 0.05), ZIndex = 6, TextXAlignment = Enum.TextXAlignment.Left, Parent = oddsBox })
@@ -565,7 +567,7 @@ for i, egg in Config.Shop.Eggs do
 		local chips = {
 			{ #egg.Pool .. " EXCLUSIVE PETS", "Only in this egg" },
 			{ string.format("%g%% %s", rarest[2] / total * 100, Config.AnimalInfo[rarest[1]].Rarity:upper()), "Chase the rarest" },
-			{ "LIMITED DROP", "Get it before it's gone" },
+			{ string.format("UP TO +%d%%", (Config.AnimalInfo[rarest[1]].Bonus or 0) * 100), "Better than your best pet" },
 		}
 		for k, chip in chips do
 			local cf = make("Frame", rect({ BackgroundColor3 = Color3.fromRGB(60, 20, 120), BackgroundTransparency = 0.45, Parent = f }, 326 + (k - 1) * 261, 130, 245, 71, W, H),

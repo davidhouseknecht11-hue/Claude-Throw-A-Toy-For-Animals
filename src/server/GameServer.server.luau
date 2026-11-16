@@ -51,7 +51,7 @@ end
 local rng = Random.new()
 local Profiles = {} -- [Player] = profile
 
-type Animal = { Id: string, Name: string, Size: string, Mutation: string, Placed: boolean }
+type Animal = { Id: string, Name: string, Size: string, Mutation: string, Placed: boolean, Base: number? } -- Base: Exclusive's locked income
 
 local function defaultData()
 	return {
@@ -79,9 +79,47 @@ local function animalIncome(a: Animal): number
 	if not info then
 		return 0
 	end
+	if a.Base then
+		return a.Base
+	end
 	local size = Config.Find(Config.Sizes, a.Size) or Config.Sizes[1]
 	local mut = Config.Find(Config.Mutations, a.Mutation) or Config.Mutations[1]
-	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult * (info.Boost or 1)
+	return Config.BaseIncome(info.Zone, info.Rarity) * size.Mult * mut.Mult
+end
+
+-- Exclusives key off the best non-Exclusive so a 10-pack can't compound on itself.
+local function bestRegularIncome(d): number
+	local best = Config.BaseIncome(1, "Mythic") -- floor for brand-new players
+	for _, a in d.Animals do
+		local info = Config.AnimalInfo[a.Name]
+		if info and not info.Bonus then
+			best = math.max(best, animalIncome(a))
+		end
+	end
+	return best
+end
+
+-- give Exclusives without a locked income one (hatch, and saves from before this rule)
+local function lockExclusives(d)
+	local best
+	for _, a in d.Animals do
+		local info = Config.AnimalInfo[a.Name]
+		if info and info.Bonus and not a.Base then
+			best = best or bestRegularIncome(d)
+			a.Base = best * (1 + info.Bonus)
+		end
+	end
+end
+do -- self-check: +700% on a $100/s best is $800/s, and other Exclusives don't count as "best"
+	local d = { Animals = {
+		{ Id = "a", Name = Config.Zones[1].Animals[1][1], Size = Config.Sizes[1].Name, Mutation = Config.Mutations[1].Name, Placed = false, Base = 100 },
+		{ Id = "b", Name = "Void Kitsune", Size = "", Mutation = "", Placed = false, Base = 1e9 },
+		{ Id = "c", Name = "Crystal Bunny", Size = "", Mutation = "", Placed = false },
+	} }
+	d.Animals[1].Base = nil
+	local best = bestRegularIncome(d)
+	lockExclusives(d)
+	assert(math.abs(d.Animals[3].Base - best * 1.5) < 1e-6 and d.Animals[2].Base == 1e9, "Exclusive bonus self-check failed")
 end
 
 local function indexBonus(d): number
@@ -969,6 +1007,7 @@ Players.PlayerAdded:Connect(function(player)
 		return
 	end
 	local prof = { Data = d, Plot = assignPlot(player), Busy = false, Training = false, CanSave = loaded, Passes = {} }
+	lockExclusives(prof.Data)
 	Profiles[player] = prof
 	if not loaded then
 		-- never overwrite a save we failed to read
@@ -1079,6 +1118,10 @@ local function hatch(player: Player, prof, egg, count: number)
 		end
 		local animal: Animal = { Id = HttpService:GenerateGUID(false), Name = pick[1], Size = size, Mutation = mut, Placed = false }
 		d.Index[pick[1]] = true
+		local info = Config.AnimalInfo[pick[1]]
+		if info and info.Bonus then
+			animal.Base = bestRegularIncome(d) * (1 + info.Bonus)
+		end
 		addAnimal(player, animal)
 		table.insert(results, { Name = animal.Name, Size = size, Mutation = mut, Odds = math.max(1, math.floor(1 / chance + 0.5)) })
 	end
