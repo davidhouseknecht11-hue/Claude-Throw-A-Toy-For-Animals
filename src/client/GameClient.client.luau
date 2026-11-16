@@ -446,9 +446,18 @@ do
 		openPanel = nil
 	end)
 end
-button({ Size = UDim2.fromOffset(110, 30), Position = UDim2.new(1, -250 + 118 - 55, 0, 64 + 116), Text = "DETAILS", Color = C.Blue, Parent = hud }, function()
+local luckDetails = button({ Size = UDim2.fromOffset(110, 30), Position = UDim2.new(1, -250 + 118 - 55, 0, 64 + 116), Text = "DETAILS", Color = C.Blue, Parent = hud }, function()
 	toggle(luckFrame)
 end)
+-- the 100x LUCK card only shows while the throw meter is up, like the reference
+local function showLuck(on: boolean)
+	luckBtn.Visible, priceBg.Visible, luckDetails.Visible = on, on, on
+	if not on and luckFrame.Visible then
+		luckFrame.Visible = false
+		openPanel = nil
+	end
+end
+showLuck(false)
 
 -- ---------- SHOP ----------
 local shopFrame, shopBody = panel("🧸 Toy Shop", C.Pink)
@@ -1394,6 +1403,7 @@ local function throwNow()
 	busy = true
 	meter.Visible = false
 	onPad = false
+	showLuck(false)
 	local sent = throwCount
 	Remotes.Throw:FireServer(meterValue)
 	-- failsafe if the server refused the throw: no result arrived, so hand the camera back
@@ -1422,6 +1432,7 @@ RunService.RenderStepped:Connect(function(dt)
 		onPad = true
 		meterT = 0
 		meter.Visible = true
+		showLuck(true)
 		bounce(meter)
 		local hum = player.Character:FindFirstChildOfClass("Humanoid")
 		if hum then

@@ -1,5 +1,5 @@
 {
-  "_help": "Upload assets/studs.png, assets/inlet.png and assets/sounds/*.wav in Studio (Asset Manager / Creator Dashboard), paste the rbxassetid:// ids here, then run: python tools/build_place.py",
+  "_help": "Upload assets/studs.png and assets/sounds/*.wav in Studio (Asset Manager / Creator Dashboard), paste the rbxassetid:// ids here, then run: python tools/build_place.py",
   "studs": "rbxassetid://10509831729",
   "sounds": {
     "Music": "rbxassetid://72480441481166",
@@ -19,6 +19,5 @@
     "Error": "rbxassetid://78381314373036",
     "Munch": "rbxassetid://103130277013261",
     "Tick": "rbxassetid://116105052515706"
-  },
-  "inlet": ""
+  }
 }

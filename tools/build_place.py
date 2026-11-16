@@ -627,21 +627,13 @@ for px in (-120, -72, -24, 24, 72, 120):
             pm.add(part("SlotPost", (0.7, 5.2, 0.7), L(-16 + dx, 2.6, 20), "A8703C", rot=rot))
         pm.add(part("SlotSign", (7, 3.4, 0.7), L(-16, 3.9, 20), "FFC21C", rot=rot))
         pm.add(part("SlotSignPlate", (5.6, 1.1, 0.75), L(-16, 3.2, 20), "2A2A3A", rot=rot, collide=False))
-        # pull-up bar: white posts with rainbow bands, glowing crossbar, level-coloured infinity sign on top,
-        # dashed white ring on the ground and a round gold upgrade pad (BarFrame parts take the bar level's colour)
+        # pull-up bar in the bar level's colour (BarFrame parts are recoloured by the server), dashed ring, round gold pad
         for lx in (12, 20):
-            pm.add(part("BarPost", (1, 10, 1), L(lx, 5, 30), "F4F4F4", rot=rot))
-            for k, c in enumerate(("FF4A4A", "FF9A2E", "FFE45C", "4CD964", "4CB4FF", "B46CFF")):
-                pm.add(part("BarBand", (1.08, 0.36, 1.08), L(lx, 0.9 + k * 0.42, 30), c, kind="neon", rot=rot, collide=False))
-        pm.add(part("BarPost", (9, 0.8, 0.8), L(16, 9.6, 30), "F4F4F4", rot=rot))
+            pm.add(part("BarFrame", (1, 10, 1), L(lx, 5, 30), "4656C8", rot=rot))
+            pm.add(part("BarFoot", (2, 0.6, 2), L(lx, 0.3, 30), "2A2A3A", rot=rot))
+        pm.add(part("BarFrame", (9, 0.8, 0.8), L(16, 9.6, 30), "4656C8", rot=rot))
         pm.add(part("BarGlow", (7, 0.4, 0.4), L(16, 9.6, 30.5), "FFFFFF", kind="neon", rot=rot, collide=False))
         cx, _, cz = L(16, 0, 30)
-        for side in (-1, 1):  # infinity sign: two loops of short glowing segments
-            for k in range(12):
-                th = 2 * math.pi * k / 12
-                c_, s_ = math.cos(th + math.pi / 2), math.sin(th + math.pi / 2)
-                pm.add(part("BarFrame", (0.75, 0.32, 0.32), (cx + side * 1.25 + 1.2 * math.cos(th), 12.3 + 1.0 * math.sin(th), cz), "4656C8",
-                            kind="neon", R=(c_, -s_, 0, s_, c_, 0, 0, 0, 1), collide=False, query=False))
         for k in range(18):  # dashed ring around the bar
             t = 2 * math.pi * k / 18
             pm.add(part("BarRing", (1.5, 0.08, 0.4), (cx + 7.5 * math.cos(t), 0.06, cz + 7.5 * math.sin(t)), "FFFFFF", kind="neon",
@@ -702,7 +694,9 @@ for name, mdl in MODELS.items():
     m.add(root)
     m.raw(f'<Ref name="PrimaryPart">{root.ref}</Ref>')
     for b in mdl["boxes"]:
-        m.add(part(b["b"], b["s"], b["p"], b["c"], kind=b["m"], R=b["r"], collide=False, variant="StudsSmall", query=False))
+        bp = m.add(part(b["b"], b["s"], b["p"], b["c"], kind=b["m"], R=b["r"], collide=False, variant="StudsSmall", query=False))
+        if b.get("sh") == "cyl":
+            bp.raw('<token name="shape">2</token>')
     rig.append(f'\t["{name}"] = {{ ' + ", ".join(f'{k} = Vector3.new({v[0]}, {v[1]}, {v[2]})' for k, v in mdl["pivots"].items()) + " },")
 rig.append("}")
 shared.add(script_src("ModuleScript", "PetRig", "\n".join(rig)))
@@ -739,7 +733,7 @@ lighting.add(Item("SunRaysEffect", "SunRays")).raw('<float name="Intensity">0.04
 matsvc = Item("MaterialService", "MaterialService")
 for vname, tile in (("Studs", 1.0), ("StudsSmall", 0.25)):
     mv = matsvc.add(Item("MaterialVariant", vname))
-    mv.raw('<token name="BaseMaterial">256</token>').raw(content("ColorMap", ASSETS.get("inlet") or ASSETS.get("studs", "")))  # recessed-square look; studs until inlet.png is uploaded.raw(f'<float name="StudsPerTile">{tile}</float>')
+    mv.raw('<token name="BaseMaterial">256</token>').raw(content("ColorMap", ASSETS.get("studs", ""))).raw(f'<float name="StudsPerTile">{tile}</float>')
     mv.raw('<token name="MaterialPattern">0</token>')
 
 out = ['<roblox xmlns:xmime="http://www.w3.org/2005/05/xmlmime" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" '

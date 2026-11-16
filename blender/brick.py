@@ -31,8 +31,8 @@ class Brick:
         self.pivots = {}
         MODELS.append(self)
 
-    def b(self, size, pos, color, bone="body", rot=None, kind="plastic"):
-        self.boxes.append(dict(size=size, pos=pos, color=color, bone=bone, rot=rot, kind=kind))
+    def b(self, size, pos, color, bone="body", rot=None, kind="plastic", shape=None):
+        self.boxes.append(dict(size=size, pos=pos, color=color, bone=bone, rot=rot, kind=kind, shape=shape))
         return self
 
     def m(self, size, pos, color, bone="body", rot=None, kind="plastic"):
@@ -88,6 +88,8 @@ class Brick:
             R = to_roblox(euler(bx["rot"]))
             out.append(dict(s=[round(sx, 3), round(sz, 3), round(sy, 3)], p=[round(x, 3), round(z, 3), round(-y, 3)],
                             r=[round(v, 5) for row in R for v in row], c=bx["color"], m=bx["kind"], b=bx["bone"]))
+            if bx.get("shape"):
+                out[-1]["sh"] = bx["shape"]  # Roblox part shape, e.g. "cyl" (axis = the box's local X)
         piv = {k: [round(v[0], 3), round(v[2], 3), round(-v[1], 3)] for k, v in self.pivots.items()}
         return dict(boxes=out, pivots=piv, group=self.group)
 

@@ -484,10 +484,22 @@ a = Brick("Icon Muscle", "Icons")
 a.b((1.7, 0.22, 0.22), (0, 0, 0), "9AA4B2")
 for x in (-0.62, 0.62):
     a.b((0.22, 0.5, 1.1), (x, 0, 0), "3A3F4A").b((0.16, 0.45, 0.8), (x * 1.35, 0, 0), "50586A")
-a = Brick("Icon Clover", "Icons")
-for x, z in ((-0.4, 0.4), (0.4, 0.4), (-0.4, -0.35), (0.4, -0.35)):
-    a.b((0.75, 0.3, 0.75), (x, 0, z), "3CC84A")
-a.b((0.15, 0.3, 0.8), (0.1, 0, -0.9), "2A9A38", rot=(0, 20, 0))
+a = Brick("Icon Clover", "Icons")  # four-leaf clover: each leaf a heart = diamond + two smooth discs (Roblox cylinders), veins, stem
+import math as _cm
+A = 0.5  # heart square side
+for k in range(4):
+    t = _cm.radians(45 + 90 * k)  # leaf direction (diagonal X layout)
+    ux, uz = _cm.cos(t), _cm.sin(t)
+    px, pz = -uz, ux
+    d = A / _cm.sqrt(2)
+    a.b((A, 0.24, A), (ux * d, 0, uz * d), "3CC84A", rot=(0, -_cm.degrees(t) + 45, 0))  # diamond, tip at the centre
+    for side in (-1, 1):  # discs on the two outer sides of the diamond
+        cx, cz = ux * d * 1.5 + px * side * d / 2, uz * d * 1.5 + pz * side * d / 2
+        a.b((0.24, A, A), (cx, 0, cz), "3CC84A", rot=(0, 0, 90), shape="cyl")
+    a.limb((ux * 0.08, 0.13, uz * 0.08), (ux * 0.62, 0.13, uz * 0.62), 0.05, 0.035, "8AEB7E")  # vein
+a.b((0.16, 0.26, 0.16), (0, 0.01, 0), "2A9A38", rot=(0, 45, 0))
+a.limb((0.02, -0.03, -0.05), (0.18, -0.03, -0.75), 0.11, 0.09, "2A9A38")
+a.limb((0.18, -0.03, -0.75), (0.34, -0.03, -1.05), 0.09, 0.08, "2A9A38")
 
 
 # Robux shop art (eggs + cash), stacked brick layers so they keep the studded look
