@@ -244,8 +244,20 @@ end
 
 -- ===================== SCREEN GUI =====================
 local gui = make("ScreenGui", { Name = "ThrowAToyUI", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player:WaitForChild("PlayerGui") })
-local hud = make("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
-local overlay = make("Frame", { Name = "Overlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = gui })
+-- Everything lives in `root`, shrunk by one UIScale on small screens (phones). root is 1/s big so scale-sized frames still fill the screen.
+local root = make("Frame", { Name = "Root", BackgroundTransparency = 1, Parent = gui })
+local uiScale = make("UIScale", { Parent = root })
+local function fitScreen()
+	local v = camera.ViewportSize
+	local sc = math.clamp(math.min(v.X / 1100, v.Y / 620), 0.5, 1)
+	uiScale.Scale = sc
+	root.Size = UDim2.fromScale(1 / sc, 1 / sc)
+end
+fitScreen()
+camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitScreen)
+local TOUCH = UIS.TouchEnabled and not UIS.KeyboardEnabled -- phones/tablets: keep clear of the thumbstick and jump button
+local hud = make("Frame", { Name = "HUD", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
+local overlay = make("Frame", { Name = "Overlay", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Parent = root })
 
 -- toasts
 local toastHolder = make("Frame", { Size = UDim2.new(0.5, 0, 0.5, 0), Position = UDim2.fromScale(0.25, 0.1), BackgroundTransparency = 1, Parent = overlay },
@@ -291,6 +303,13 @@ local function statRow(icon: string, h: number, color: Color3): TextLabel
 end
 local powerLabel = statRow("Icon Muscle", 38, Color3.fromRGB(110, 210, 255))
 local cashLabel = statRow("Icon Coin", 44, Color3.fromRGB(120, 255, 110))
+if TOUCH then -- thumbstick owns bottom-left: sit at the top, right of Roblox's menu buttons (~170 screen px wide)
+	local function place()
+		stats.Position = UDim2.fromOffset(170 / uiScale.Scale, 0)
+	end
+	place()
+	uiScale:GetPropertyChangedSignal("Scale"):Connect(place)
+end
 local incomeLabel = label({ Text = "+$0/s", Size = UDim2.new(1, 0, 0, 24), TextXAlignment = Enum.TextXAlignment.Left, TextColor3 = Color3.fromRGB(200, 255, 190), Parent = stats })
 
 local function updateStats()
@@ -322,7 +341,7 @@ local luckTimer = label({ Text = "", Size = UDim2.new(1, 0, 0, 22), Position = U
 local openPanel: Frame? = nil
 local function panel(title: string, color: Color3): (Frame, Frame)
 	local f = make("Frame", { Size = UDim2.fromScale(0.62, 0.66), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
-		BackgroundColor3 = C.Panel, Visible = false, Parent = gui }, {
+		BackgroundColor3 = C.Panel, Visible = false, Parent = root }, {
 		corner(18), stroke(4),
 		make("UISizeConstraint", { MaxSize = Vector2.new(860, 560), MinSize = Vector2.new(340, 300) }),
 	})
@@ -467,7 +486,7 @@ local function section(parent: Instance, order: number, w: number, h: number): F
 end
 
 local robuxFrame = make("Frame", { Size = UDim2.fromScale(0.9, 0.9), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
-	BackgroundColor3 = SH.Bg, Visible = false, Parent = gui }, {
+	BackgroundColor3 = SH.Bg, Visible = false, Parent = root }, {
 	corner(22), stroke(5, C.Dark),
 	make("UIAspectRatioConstraint", { AspectRatio = 1200 / 1100 }),
 	make("UISizeConstraint", { MaxSize = Vector2.new(1000, 920) }),
@@ -655,7 +674,7 @@ do -- tabs (Figma: 1200 x 74 under the header) scroll to their section
 			for _, o in btns do
 				setButtonColor(o, o == b and SH.TabOn or SH.Tab)
 			end
-			local y = t[2].AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y - 10
+			local y = (t[2].AbsolutePosition.Y - scroll.AbsolutePosition.Y) / uiScale.Scale + scroll.CanvasPosition.Y - 10
 			TweenService:Create(scroll, TweenInfo.new(0.35, Enum.EasingStyle.Quad), { CanvasPosition = Vector2.new(0, math.max(0, y)) }):Play()
 		end)
 		table.insert(btns, b)
@@ -665,7 +684,7 @@ end
 
 local function fitSections()
 	for f, ratio in sized do
-		f.Size = UDim2.new(1, 0, 0, math.floor(f.AbsoluteSize.X * ratio))
+		f.Size = UDim2.new(1, 0, 0, math.floor(f.AbsoluteSize.X / uiScale.Scale * ratio))
 	end
 end
 scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitSections)
@@ -727,7 +746,7 @@ end)
 
 -- ---------- ANIMALS (right-docked "My Animals" list, like the original) ----------
 local animalsFrame = make("Frame", { Size = UDim2.fromScale(0.3, 0.8), Position = UDim2.new(1, -14, 0.5, 0), AnchorPoint = Vector2.new(1, 0.5),
-	BackgroundColor3 = Color3.fromRGB(26, 24, 40), Visible = false, Parent = gui }, {
+	BackgroundColor3 = Color3.fromRGB(26, 24, 40), Visible = false, Parent = root }, {
 	corner(18), stroke(4),
 	make("UISizeConstraint", { MinSize = Vector2.new(330, 360), MaxSize = Vector2.new(460, 700) }),
 })
@@ -875,7 +894,7 @@ local function petSlot(parent: Instance, a, order: number, number: number?, lazy
 		tipName.Text = a.Name
 		tipName.TextColor3 = rarityColor(a.Name)
 		tipInfo.Text = table.concat(tags, " | ") .. " - click your plot floor to place"
-		tip.Position = UDim2.fromOffset(slot.AbsolutePosition.X + 32, slot.AbsolutePosition.Y - 6)
+		tip.Position = UDim2.fromOffset(slot.AbsolutePosition.X / uiScale.Scale + 32, slot.AbsolutePosition.Y / uiScale.Scale - 6)
 		tip.Visible = true
 	end)
 	slot.MouseLeave:Connect(function()
@@ -997,6 +1016,8 @@ local function toggleInventory()
 		end
 	end
 end
+button({ Size = UDim2.fromOffset(64, 64), Position = UDim2.new(0.5, (10 * 70 - 6) / 2 + 8, 1, -13), AnchorPoint = Vector2.new(0, 1),
+	Text = "Bag", Color = C.Orange, Parent = hud }, toggleInventory)
 
 UIS.InputBegan:Connect(function(input, processed)
 	if processed or busy or onPad then
