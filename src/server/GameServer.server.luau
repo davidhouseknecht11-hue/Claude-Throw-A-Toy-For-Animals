@@ -544,10 +544,37 @@ local function startTraining(player: Player)
 	-- dead hang: hands just under the bar; at the top the upper arms go horizontal, lifting the body ~one upper arm
 	local low = spot.CFrame.Rotation + Vector3.new(spot.Position.X, barY - armLen * 0.97 - shoulderOff, spot.Position.Z)
 	local high = low * CFrame.new(0, r15 and upperLen * 0.95 or armLen * 0.5, 0)
-	hrp.CFrame = low
-	for _, j in joints do
-		(j.T :: any)[j.Prop] = pullPose(j, 0)
+	-- the estimate above misses on some avatars (hands at head height), so pose each end, compute the hand position and put it on the bar
+	local grip = char:FindFirstChild("RightHand") or char:FindFirstChild("Right Arm") :: BasePart
+	-- where a limb would be with the root at `root`, walked through the joint chain (server physics lags, so don't read Position)
+	local function limbCF(part: Instance, root: CFrame): CFrame
+		if part == hrp then
+			return root
+		end
+		for _, j in char:GetDescendants() do
+			if j:IsA("Motor6D") and j.Part1 == part and j.Part0 then
+				return limbCF(j.Part0, root) * j.C0 * j.C1:Inverse()
+			elseif j:IsA("AnimationConstraint") and j.Attachment1 and j.Attachment1.Parent == part and j.Attachment0 then
+				return limbCF(j.Attachment0.Parent :: Instance, root) * j.Attachment0.CFrame * j.Attachment1.CFrame:Inverse()
+			end
+		end
+		return (part :: BasePart).CFrame -- not connected: leave as is
 	end
+	local function onBar(base: CFrame, p: number): CFrame
+		for _, j in joints do
+			(j.T :: any)[j.Prop] = pullPose(j, p)
+		end
+		if not (grip and grip.Parent) then
+			return base
+		end
+		local cf = limbCF(grip, base)
+		-- R6 arms are one part: the hand is the end that now points up
+		local handY = grip.Name == "RightHand" and cf.Position.Y or (cf * Vector3.new(0, -grip.Size.Y / 2 + 0.3, 0)).Y
+		return base + Vector3.new(0, barY - handY, 0)
+	end
+	high = onBar(high, 1)
+	low = onBar(low, 0)
+	hrp.CFrame = low
 	local token = (prof.TrainToken or 0) + 1
 	prof.TrainToken = token
 	task.spawn(function()
@@ -865,7 +892,9 @@ for _, plot in PlotsFolder:GetChildren() do
 	end
 	local pad = plot:FindFirstChild("UpgradePad")
 	if pad then
-		billboard(pad, UDim2.fromOffset(220, 70), Vector3.new(0, 4, 0), 80).Name = "Info"
+		local info = billboard(pad, UDim2.fromOffset(220, 70), Vector3.new(0, 7.5, 0), 80)
+		info.Name = "Info"
+		info.AlwaysOnTop = true -- standing on the pad, your own character would hide it
 		prompt(pad, "Upgrade Bar", "Pull-up Bar").Triggered:Connect(ownerOnly(plot, function(player)
 			feedback(player, runAction(player, "UpgradeBar"))
 		end))
