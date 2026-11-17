@@ -628,7 +628,10 @@ ThrowEvent.OnServerEvent:Connect(function(player: Player, quality: any)
 	for _, a in Config.Zones[zone].Animals do
 		table.insert(a[2] == "Secret" and secrets or regular, a)
 	end
-	local pAny = 1 - (1 - math.min(1, #secrets * Config.SecretRollChance)) ^ rolls -- chance any Secret comes, after the best-of rolls
+	local pAny = math.min(1, #secrets * Config.SecretRollChance) -- chance any Secret comes
+	if boosted then
+		pAny = math.max(pAny, Config.LuckySecretChance) -- Super Lucky Throw: 1% Secret, but never worse than a normal throw
+	end
 	local pick, pA -- pA: chance of this animal on a normal throw (the "1 in X" always shows normal odds)
 	if #secrets > 0 and rng:NextNumber() < pAny then
 		pick, pA = secrets[rng:NextInteger(1, #secrets)], Config.SecretChance

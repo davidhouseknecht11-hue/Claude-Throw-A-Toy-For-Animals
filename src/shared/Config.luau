@@ -180,6 +180,7 @@ Config.ThrowCooldown = 1.5 -- seconds after the reveal finishes
 Config.RevealSeconds = 5.5 -- animal walks in, name reveal, result card
 Config.OneInSeconds = 2.4 -- how much longer that reveal runs
 Config.SecretChance = 1 / 10000 -- the odds players SEE for each Secret (index, luck panel, "1 in" reveal)
+Config.LuckySecretChance = 0.01 -- a Super Lucky Throw's chance of a Secret (the luck panel already shows ~1%)
 Config.SecretRollChance = 1 / 250 -- the odds actually rolled per throw for EACH Secret in the zone; luck doesn't change it
 Config.SecretSeconds = 3.2 -- a Secret's Blender cinematic runs this much longer than a normal reveal (replaces OneInSeconds)
 
