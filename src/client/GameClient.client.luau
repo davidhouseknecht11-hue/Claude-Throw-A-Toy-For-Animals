@@ -1201,8 +1201,43 @@ sideButton("Animals", "Icon Paw", UDim2.new(1, -106, 0.5, -60), C.Orange, functi
 	toggle(animalsFrame, refreshAnimals)
 end)
 
+-- price signs on your own upgrade pad and slot sign, drawn here from your data (server-made ones never showed in live servers)
+local plotSigns: { [Instance]: TextLabel } = {}
+local function plotSign(part: Instance, y: number): TextLabel
+	if not plotSigns[part] then
+		local bb = make("BillboardGui", { Size = UDim2.fromOffset(220, 70), StudsOffset = Vector3.new(0, y, 0), LightInfluence = 0,
+			AlwaysOnTop = true, MaxDistance = 80, Parent = part })
+		plotSigns[part] = label({ Text = "", Size = UDim2.fromScale(1, 1), Parent = bb })
+	end
+	return plotSigns[part]
+end
+local function updatePlotSigns()
+	local plot = Data and Map.Plots:FindFirstChild(player:GetAttribute("PlotName") or "")
+	if not plot then
+		return
+	end
+	local pad, sign = plot:FindFirstChild("UpgradePad"), plot:FindFirstChild("SlotSign")
+	if pad then
+		local nextBar = Config.Bars[Data.Bar + 1]
+		plotSign(pad, 7.5).Text = nextBar and string.format("💪 Bar Lv %d > %d
+<font color=\"#7CFF6B\">$%s</font>", Data.Bar, Data.Bar + 1, Util.Format(nextBar.Price))
+			or string.format("💪 Bar Lv %d  MAX", Data.Bar)
+	end
+	if sign then
+		local placed = 0
+		for _, a in Data.Animals do
+			placed += a.Placed and 1 or 0
+		end
+		plotSign(sign, 4.5).Text = Data.Slots >= Config.MaxSlots and string.format("🐾 %d/%d  MAX", placed, Data.Slots)
+			or string.format("🐾 %d > %d
+<font color=\"#7CFF6B\">$%s</font>", Data.Slots, Data.Slots + 2, Util.Format(Config.SlotPrice(Data.Slots)))
+	end
+end
+player:GetAttributeChangedSignal("PlotName"):Connect(updatePlotSigns)
+
 Remotes.Data.OnClientEvent:Connect(function(d)
 	Data = d
+	updatePlotSigns()
 	refreshShop()
 	refreshPasses()
 	refreshAnimals()

@@ -280,24 +280,7 @@ local function renderPlot(prof)
 	for _, m in existing do -- picked up, sold or gone
 		m:Destroy()
 	end
-	-- signs for the owner
 	local d = prof.Data
-	local slotLabel = plot:FindFirstChild("SlotSign") and plot.SlotSign:FindFirstChild("Info")
-	if slotLabel then
-		local t = slotLabel:FindFirstChildOfClass("TextLabel")
-		if d.Slots >= Config.MaxSlots then
-			t.Text = string.format("🐾 %d/%d  MAX", placedCount(d), d.Slots)
-		else
-			t.Text = string.format("🐾 %d > %d\n<font color=\"#7CFF6B\">$%s</font>", d.Slots, d.Slots + 2, Util.Format(Config.SlotPrice(d.Slots)))
-		end
-	end
-	local barInfo = plot:FindFirstChild("UpgradePad") and plot.UpgradePad:FindFirstChild("Info")
-	if barInfo then
-		local t = barInfo:FindFirstChildOfClass("TextLabel")
-		local nextBar = Config.Bars[d.Bar + 1]
-		t.Text = nextBar and string.format("💪 Bar Lv %d > %d\n<font color=\"#7CFF6B\">$%s</font>", d.Bar, d.Bar + 1, Util.Format(nextBar.Price))
-			or string.format("💪 Bar Lv %d  MAX", d.Bar)
-	end
 	for _, p in plot:GetChildren() do
 		if p.Name == "BarFrame" and p:IsA("BasePart") then
 			p.Color = Config.Bars[d.Bar].Color
@@ -892,16 +875,12 @@ for _, plot in PlotsFolder:GetChildren() do
 	end
 	local pad = plot:FindFirstChild("UpgradePad")
 	if pad then
-		local info = billboard(pad, UDim2.fromOffset(220, 70), Vector3.new(0, 7.5, 0), 80)
-		info.Name = "Info"
-		info.AlwaysOnTop = true -- standing on the pad, your own character would hide it
 		prompt(pad, "Upgrade Bar", "Pull-up Bar").Triggered:Connect(ownerOnly(plot, function(player)
 			feedback(player, runAction(player, "UpgradeBar"))
 		end))
 	end
 	local sign = plot:FindFirstChild("SlotSign")
 	if sign then
-		billboard(sign, UDim2.fromOffset(220, 70), Vector3.new(0, 4.5, 0), 80).Name = "Info"
 		prompt(sign, "Buy +2 Slots", "Plot").Triggered:Connect(ownerOnly(plot, function(player)
 			feedback(player, runAction(player, "BuySlot"))
 		end))
