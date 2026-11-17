@@ -1219,8 +1219,7 @@ local function updatePlotSigns()
 	local pad, sign = plot:FindFirstChild("UpgradePad"), plot:FindFirstChild("SlotSign")
 	if pad then
 		local nextBar = Config.Bars[Data.Bar + 1]
-		plotSign(pad, 7.5).Text = nextBar and string.format("💪 Bar Lv %d > %d
-<font color=\"#7CFF6B\">$%s</font>", Data.Bar, Data.Bar + 1, Util.Format(nextBar.Price))
+		plotSign(pad, 7.5).Text = nextBar and string.format("💪 Bar Lv %d > %d\n<font color=\"#7CFF6B\">$%s</font>", Data.Bar, Data.Bar + 1, Util.Format(nextBar.Price))
 			or string.format("💪 Bar Lv %d  MAX", Data.Bar)
 	end
 	if sign then
@@ -1229,8 +1228,7 @@ local function updatePlotSigns()
 			placed += a.Placed and 1 or 0
 		end
 		plotSign(sign, 4.5).Text = Data.Slots >= Config.MaxSlots and string.format("🐾 %d/%d  MAX", placed, Data.Slots)
-			or string.format("🐾 %d > %d
-<font color=\"#7CFF6B\">$%s</font>", Data.Slots, Data.Slots + 2, Util.Format(Config.SlotPrice(Data.Slots)))
+			or string.format("🐾 %d > %d\n<font color=\"#7CFF6B\">$%s</font>", Data.Slots, Data.Slots + 2, Util.Format(Config.SlotPrice(Data.Slots)))
 	end
 end
 player:GetAttributeChangedSignal("PlotName"):Connect(updatePlotSigns)
