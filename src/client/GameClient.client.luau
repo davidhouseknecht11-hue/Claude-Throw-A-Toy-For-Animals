@@ -2330,7 +2330,14 @@ RunService.Heartbeat:Connect(function(dt)
 		if not hum then
 			continue -- in a Backpack, not in a hand
 		end
-		local walking = hum.MoveDirection.Magnitude > 0.1
+		if #h.Welds == 0 then -- another player's pet can arrive before its welds: pick them up once they're here
+			addHeld(tool)
+			h = held[tool]
+		end
+		-- MoveDirection is only known for your own character, so judge other holders by how fast they move
+		local root = char:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local v = root and root.AssemblyLinearVelocity or Vector3.zero
+		local walking = hum.MoveDirection.Magnitude > 0.1 or Vector3.new(v.X, 0, v.Z).Magnitude > 2
 		local t = now + h.Phase
 		for _, w in h.Welds do
 			local r = boneRot(w[2], t, walking)
